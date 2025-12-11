@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, ChangeEvent, KeyboardEvent } from 'react';
 import { Paperclip, Send, Mic, X, Video, Phone, Settings, Bot, User, FileText, ImageIcon } from 'lucide-react';
 import CallInterface from './CallInterface';
-import { ChatService } from './services/chatService';
+import { ModelSelector } from './components/ModelSelector';
+import { ChatService } from './services/chatServiceOpenRouter';
 import { ChatMessage, Attachment, Property } from './types';
 
 // More professional and modern agent profile image
@@ -23,8 +24,8 @@ export const AIChatWidget: React.FC = () => {
   const [inputText, setInputText] = useState("");
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>(["I want to buy", "I want to sell", "Just browsing"]);
-  
   const chatService = useRef(new ChatService());
+  const [currentModel, setCurrentModel] = useState(() => chatService.current.getCurrentModel());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +39,13 @@ export const AIChatWidget: React.FC = () => {
   }, []);
 
   useEffect(scrollToBottom, [messages, suggestions]);
+
+  const handleModelChange = (model: string) => {
+    setCurrentModel(model);
+    chatService.current.setModel(model as any);
+    // Reinitialize chat with new model
+    chatService.current.initChat();
+  };
 
   const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -179,6 +187,11 @@ export const AIChatWidget: React.FC = () => {
                </div>
           </div>
           <div className="flex gap-2 text-gray-500 dark:text-gray-400">
+              <ModelSelector 
+                currentModel={currentModel} 
+                onModelChange={handleModelChange}
+                className="hidden sm:block"
+              />
               <button onClick={() => setInCall(true)} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 <Video size={20} />
               </button>
