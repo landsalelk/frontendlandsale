@@ -11,7 +11,7 @@ export async function getRegions() {
             DATABASE_ID,
             COLLECTIONS.REGIONS,
             [
-                Query.equal('active', true),
+                Query.equal('is_active', true),
                 Query.orderAsc('name'),
                 Query.limit(100)
             ]
@@ -36,7 +36,7 @@ export async function getCitiesByRegion(regionId: string) {
             COLLECTIONS.CITIES,
             [
                 Query.equal('region_id', regionId),
-                Query.equal('active', true),
+                Query.equal('is_active', true),
                 Query.orderAsc('name'),
                 Query.limit(500)
             ]
@@ -63,7 +63,7 @@ export async function searchCities(regionId: string, query: string) {
             COLLECTIONS.CITIES,
             [
                 Query.equal('region_id', regionId),
-                Query.equal('active', true),
+                Query.equal('is_active', true),
                 Query.startsWith('name', query),
                 Query.orderAsc('name'),
                 Query.limit(10)
