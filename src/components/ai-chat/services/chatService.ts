@@ -1,0 +1,182 @@
+import { GoogleGenAI, Chat, Modality } from "@google/genai";
+import { base64ToUint8Array, pcmToWav, arrayBufferToBase64 } from "../utils/audio";
+
+export class ChatService {
+  private ai: GoogleGenAI;
+  private chat: Chat | null = null;
+
+  constructor() {
+    this.ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
+  }
+
+  initChat() {
+    this.chat = this.ai.chats.create({
+      model: 'gemini-2.5-flash',
+      config: {
+        systemInstruction: `You are Priya, a friendly and professional Real Estate Agent. Help users with buying, selling, or renting properties. You can analyze images of properties or review PDF documents like contracts or brochures. Keep responses concise and helpful, suitable for a WhatsApp-style chat. Use emojis occasionally.
+
+        CRITICAL REQUIREMENT: You MUST include 3 suggested responses for the user at the end of EVERY message. These suggestions should be:
+        1. Relevant to the current context.
+        2. Short (1-4 words).
+        3. Written from the user's perspective (e.g., "Show me photos", "Yes, please").
+
+        IMAGE GENERATION & EDITING:
+        - If the user asks to design a flyer, create an image, or visualize a concept, output the prompt inside <GENERATE_IMAGE> tags.
+          Example: <GENERATE_IMAGE>Modern real estate flyer for a luxury open house, gold typography, dark background</GENERATE_IMAGE>
+        - If the user sends an image and asks to edit it (e.g., "add a retro filter", "remove the chair"), output the editing instructions inside <EDIT_IMAGE> tags.
+          Example: <EDIT_IMAGE>Add a warm retro filter to the image</EDIT_IMAGE>
+
+        PROPERTY LISTINGS:
+        If the user asks to see properties, recommendations, or listings, you MUST include a structured JSON array of 2-3 properties wrapped in <PROPERTIES> tags.
+        Use realistic data and always use these specific Unsplash Image URLs for the images (rotate through them):
+        - https://images.unsplash.com/photo-1600596542815-e32c21216f3d?w=400
+        - https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400
+        - https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400
+        - https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400
+        - https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=400
+
+        FORMAT FOR PROPERTIES:
+        <PROPERTIES>
+        [
+          {
+            "id": "1",
+            "price": "$1,200,000",
+            "address": "123 Maple Drive, Beverly Hills",
+            "specs": "4 Bed • 3 Bath • 2,500 sqft",
+            "image": "https://images.unsplash.com/photo-1600596542815-e32c21216f3d?w=400"
+          }
+        ]
+        </PROPERTIES>
+
+        GENERAL FORMAT:
+        [Your response text]
+        [Optional: <GENERATE_IMAGE>...</GENERATE_IMAGE>]
+        [Optional: <PROPERTIES>...</PROPERTIES>]
+        <SUGGESTIONS>["Suggestion 1", "Suggestion 2", "Suggestion 3"]</SUGGESTIONS>
+        `,
+      },
+      history: [
+        {
+          role: 'model',
+          parts: [{ text: "Hello! I'm Priya, your personal Real Estate Agent. 🏡\n\nTap the video button above to show me around your property, or send me photos and documents to review!<SUGGESTIONS>[\"I want to buy\", \"I want to sell\", \"Just browsing\"]</SUGGESTIONS>" }]
+        }
+      ]
+    });
+  }
+
+  // Generates speech audio from text using gemini-2.5-flash-preview-tts
+  private async generateSpeech(text: string): Promise<string | undefined> {
+    try {
+        const response = await this.ai.models.generateContent({
+            model: 'gemini-2.5-flash-preview-tts',
+            contents: [{ parts: [{ text: text }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Kore' },
+                    },
+                },
+            },
+        });
+
+        const rawPcmBase64 = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (rawPcmBase64) {
+            // Convert Raw PCM to WAV
+            const pcmBytes = base64ToUint8Array(rawPcmBase64);
+            // 24kHz is the default sample rate for this model's audio output
+            const wavBuffer = pcmToWav(pcmBytes, 24000); 
+            return arrayBufferToBase64(wavBuffer);
+        }
+        return undefined;
+    } catch (e) {
+        console.error("Failed to generate speech", e);
+        return undefined;
+    }
+  }
+
+  // Helper to generate or edit images
+  public async generateImage(prompt: string, attachment?: { mimeType: string; data: string }): Promise<string | undefined> {
+     try {
+        const parts: any[] = [];
+        
+        // If attachment is present (Editing mode), add it first
+        if (attachment) {
+            parts.push({
+                inlineData: {
+                    mimeType: attachment.mimeType,
+                    data: attachment.data
+                }
+            });
+        }
+        
+        // Add text prompt
+        parts.push({ text: prompt });
+
+        const response = await this.ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: parts },
+            // Note: gemini-2.5-flash-image does not use responseMimeType or schemas
+        });
+
+        // Find image part in response
+        for (const candidate of response.candidates || []) {
+            for (const part of candidate.content?.parts || []) {
+                // Image parts come as inlineData
+                if (part.inlineData && part.inlineData.data) {
+                    return part.inlineData.data;
+                }
+            }
+        }
+        return undefined;
+     } catch (e) {
+        console.error("Image generation/editing failed", e);
+        return undefined;
+     }
+  }
+
+  async sendMessage(text: string, attachment?: { mimeType: string; data: string }): Promise<{ text: string, audio?: string }> {
+    if (!this.chat) {
+        this.initChat();
+    }
+
+    let messageContent: any = text;
+
+    if (attachment) {
+      messageContent = [
+        { text: text },
+        {
+          inlineData: {
+            mimeType: attachment.mimeType,
+            data: attachment.data
+          }
+        }
+      ];
+    } else {
+       messageContent = text;
+    }
+
+    const response = await this.chat!.sendMessage({ message: messageContent });
+    const responseText = response.text || "";
+
+    // Generate Audio for the response
+    // First, strip out the metadata XML tags so we don't speak them
+    const textToSpeak = responseText
+        .replace(/<SUGGESTIONS>.*?<\/SUGGESTIONS>/s, '')
+        .replace(/<PROPERTIES>.*?<\/PROPERTIES>/s, '')
+        .replace(/<GENERATE_IMAGE>.*?<\/GENERATE_IMAGE>/s, '')
+        .replace(/<EDIT_IMAGE>.*?<\/EDIT_IMAGE>/s, '')
+        .trim();
+    
+    let audioData: string | undefined = undefined;
+    
+    if (textToSpeak) {
+        audioData = await this.generateSpeech(textToSpeak);
+    }
+
+    return { 
+        text: responseText, 
+        audio: audioData
+    };
+  }
+}

@@ -1,0 +1,322 @@
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { AgentState } from '../types';
+import { LiveService } from '../services/liveService';
+
+interface CallInterfaceProps {
+  onEndCall: () => void;
+}
+
+// Professional Real Estate Agent Portrait
+const AGENT_IMAGE = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=800&auto=format&fit=crop";
+const AGENT_NAME = "Priya - Estate Agent";
+
+const CallInterface: React.FC<CallInterfaceProps> = ({ onEndCall }) => {
+  const [callDuration, setCallDuration] = useState(0);
+  const [state, setState] = useState<AgentState>(AgentState.CALLING);
+  const [micMuted, setMicMuted] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0); // 0 to 100
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [cameraError, setCameraError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const liveService = useRef<LiveService>(new LiveService());
+
+  const startCamera = useCallback(async () => {
+    // Basic support check
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError(true);
+        return;
+    }
+
+    try {
+      // Stop existing tracks (important when switching back from screen share)
+      const currentStream = videoRef.current?.srcObject as MediaStream;
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+
+      let stream: MediaStream | null = null;
+
+      try {
+        // Attempt to get user-facing camera first
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'user' }, 
+            audio: false // Audio handled by LiveService
+        });
+      } catch (err) {
+        // Fallback to any available video device
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: true, 
+                audio: false 
+            });
+        } catch (fallbackErr) {
+            // No video device found at all
+            console.log("No camera device found, continuing without video.");
+            setCameraError(true);
+            return;
+        }
+      }
+
+      if (stream && videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(e => console.error("Video play failed", e));
+        setIsScreenSharing(false);
+        setCameraError(false);
+      }
+    } catch (err) {
+      console.warn("Camera access denied or failed", err);
+      setCameraError(true);
+    }
+  }, []);
+
+  const toggleScreenShare = async () => {
+    if (isScreenSharing) {
+      await startCamera();
+    } else {
+      // Check if getDisplayMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert("Screen sharing is not supported on this device.");
+        return;
+      }
+
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        
+        if (videoRef.current) {
+          // Stop camera stream before switching
+          const currentStream = videoRef.current.srcObject as MediaStream;
+          if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+          }
+
+          videoRef.current.srcObject = screenStream;
+          videoRef.current.play();
+        }
+        setIsScreenSharing(true);
+        setCameraError(false); // Screen share counts as valid video source
+
+        // Handle user stopping via browser UI
+        screenStream.getVideoTracks()[0].onended = () => {
+          startCamera();
+        };
+
+      } catch (err) {
+        console.error("Screen share cancelled or failed", err);
+        // If cancelled, ensure we are back to camera if we weren't already
+        if (!isScreenSharing) await startCamera();
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Start Camera initially
+    startCamera();
+
+    // Start Live Service
+    liveService.current.connect(
+        () => setState(AgentState.CONNECTED),
+        () => setState(AgentState.ENDED),
+        (error: Error) => {
+            // Callback for runtime errors (like connection lost)
+            setErrorMessage(error.message);
+            setState(AgentState.ERROR);
+        },
+        (level) => {
+            // Normalize audio level for visualizer roughly 0-100
+            setAudioLevel(Math.min(100, level * 5));
+        }
+    ).then(() => {
+        // Once connected, start sending video frames
+        if (videoRef.current) {
+            liveService.current.startVideoStreaming(videoRef.current);
+        }
+    }).catch((e: Error) => {
+        console.error("Failed to start", e);
+        // Display the user-friendly error message thrown by LiveService
+        setErrorMessage(e.message || "Unable to start the call.");
+        setState(AgentState.ERROR);
+    });
+
+    return () => {
+      liveService.current.disconnect();
+    };
+  }, [startCamera]);
+
+  useEffect(() => {
+    let timer: number;
+    if (state === AgentState.CONNECTED) {
+      timer = window.setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [state]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const handleEndCall = () => {
+    liveService.current.disconnect();
+    onEndCall();
+  };
+
+  return (
+    <div className="relative h-screen w-full bg-[#0f172a] flex flex-col items-center justify-between overflow-hidden">
+      
+      {/* Background Layer: Handles both Calling State and Agent's Video Stream */}
+      <div className="absolute inset-0 z-0 bg-black">
+        {state === AgentState.CALLING || state === AgentState.IDLE ? (
+          // Loading / Connecting State
+          <div className="flex flex-col items-center justify-center h-full w-full relative overflow-hidden bg-[#0b141a]">
+             {/* Blurred background image for aesthetics */}
+             <div className="absolute inset-0 overflow-hidden">
+                <img src={AGENT_IMAGE} className="w-full h-full object-cover blur-3xl opacity-30 scale-110" alt="" />
+             </div>
+             
+             {/* Central Profile content */}
+             <div className="z-10 flex flex-col items-center animate-pulse">
+                <div className="relative mb-8">
+                    <img 
+                      src={AGENT_IMAGE} 
+                      className="w-32 h-32 rounded-full object-cover shadow-2xl border-4 border-[#25d366]/30" 
+                      alt="Agent Profile" 
+                    />
+                    {/* Ripple/Pulse effect rings */}
+                    <div className="absolute top-0 left-0 w-32 h-32 rounded-full border border-[#25d366] animate-[ping_2s_linear_infinite] opacity-50"></div>
+                    <div className="absolute top-0 left-0 w-32 h-32 rounded-full border border-[#25d366] animate-[ping_2s_linear_infinite_1s] opacity-30"></div>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2 tracking-wide">{AGENT_NAME}</h2>
+                <p className="text-[#25d366] font-medium flex items-center gap-2 bg-[#1f2c34]/50 px-4 py-1 rounded-full backdrop-blur-sm">
+                   <span className="w-2 h-2 bg-[#25d366] rounded-full animate-bounce"></span>
+                   Connecting secure line...
+                </p>
+             </div>
+          </div>
+        ) : (
+          // Connected State (Simulated Video Feed)
+          <div className="relative w-full h-full overflow-hidden">
+            {/* Agent Image with "Talking" animation (scale) */}
+            <img 
+                src={AGENT_IMAGE} 
+                alt="Agent" 
+                className="w-full h-full object-cover transition-transform duration-100 ease-in-out"
+                style={{ 
+                    // Subtle scale effect when audio is present to simulate talking/life
+                    transform: `scale(${1 + (audioLevel / 500)})` 
+                }}
+            />
+            {/* Gradient overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60" />
+            
+            {/* Error Overlay */}
+            {state === AgentState.ERROR && (
+                <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-50 p-6">
+                    <div className="text-center text-white max-w-sm">
+                        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                             <i className="fas fa-exclamation-triangle text-3xl text-red-500"></i>
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">Connection Issue</h3>
+                        <p className="text-gray-300 mb-6">{errorMessage || "An unexpected error occurred."}</p>
+                        
+                        <button 
+                            onClick={handleEndCall}
+                            className="bg-white text-black px-6 py-2 rounded-full font-medium hover:bg-gray-200 transition"
+                        >
+                            Return to Chat
+                        </button>
+                    </div>
+                </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Top Bar: Only visible when connected to avoid clutter during calling state */}
+      {state === AgentState.CONNECTED && (
+        <div className="absolute top-0 w-full z-20 pt-10 pb-4 px-4 flex flex-col items-center">
+          <div className="flex flex-col items-center animate-fadeInDown">
+            <h2 className="text-2xl font-semibold text-white tracking-wide drop-shadow-md">{AGENT_NAME}</h2>
+            
+            <div className="flex items-center gap-2 mt-1">
+                {/* Voice Activity Indicator next to time */}
+                {audioLevel > 5 && (
+                     <div className="flex gap-0.5 items-end h-3">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="w-1 bg-green-500 rounded-full animate-pulse" style={{ height: `${Math.max(4, audioLevel * 0.2)}px` }}></div>
+                        ))}
+                     </div>
+                )}
+                <div className="text-sm text-green-400 font-medium bg-black/20 px-3 py-1 rounded-full backdrop-blur-sm">
+                    {formatTime(callDuration)}
+                </div>
+            </div>
+
+            <p className="text-xs text-gray-300 mt-2 flex items-center gap-1 opacity-70">
+                <i className="fas fa-lock text-[10px]"></i> End-to-end encrypted
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* User Camera / Screen Share (PiP) */}
+      <div className={`absolute bottom-28 right-4 w-32 h-48 bg-gray-900 rounded-xl overflow-hidden shadow-2xl border border-gray-700 z-20 transition-all duration-500 ${state === AgentState.CALLING || state === AgentState.ERROR ? 'opacity-0 translate-y-10' : 'opacity-100 translate-y-0'}`}>
+        {cameraError && !isScreenSharing ? (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800 text-gray-500">
+                <i className="fas fa-video-slash text-2xl mb-1"></i>
+                <span className="text-[10px]">No Camera</span>
+            </div>
+        ) : (
+            <video 
+                ref={videoRef} 
+                autoPlay 
+                muted 
+                playsInline 
+                // If screen sharing, use object-contain to show full screen and remove mirror effect.
+                // If camera (default), use object-cover and mirror effect.
+                className={`w-full h-full ${isScreenSharing ? 'object-contain bg-black' : 'object-cover transform scale-x-[-1]'}`}
+            />
+        )}
+      </div>
+
+      {/* Controls: WhatsApp Style */}
+      <div className="absolute bottom-0 w-full z-30 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex justify-around items-center rounded-t-3xl">
+        
+        {/* Additional Tools */}
+        <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-md flex items-center justify-center text-white hover:bg-gray-700 transition">
+            <i className="fas fa-volume-up text-xl"></i>
+        </button>
+
+        {/* Screen Share Toggle */}
+        <button 
+            onClick={toggleScreenShare}
+            className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center transition ${isScreenSharing ? 'bg-white text-black' : 'bg-gray-800/80 text-white hover:bg-gray-700'}`}
+        >
+             <i className="fas fa-desktop text-xl"></i>
+        </button>
+
+        {/* Mic Toggle */}
+        <button 
+            onClick={() => setMicMuted(!micMuted)}
+            className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center text-white transition ${micMuted ? 'bg-white text-black' : 'bg-gray-800/80'}`}
+        >
+            <i className={`fas ${micMuted ? 'fa-microphone-slash' : 'fa-microphone'} text-xl`}></i>
+        </button>
+
+        {/* End Call */}
+        <button 
+            onClick={handleEndCall}
+            className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center text-white shadow-lg transform hover:scale-105 transition-all active:scale-95"
+        >
+            <i className="fas fa-phone-slash text-2xl"></i>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default CallInterface;
