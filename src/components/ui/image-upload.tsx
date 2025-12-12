@@ -1,27 +1,23 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { ImagePlus, X, Loader2 } from "lucide-react"
+import { X, ImagePlus, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import { getStorage, BUCKETS } from "@/lib/appwrite/client"
 import { ID } from "appwrite"
-import Image from "next/image"
-import { toast } from "sonner"
+import { getAccount } from "@/lib/appwrite/client"
 
 interface ImageUploadProps {
     value: string[]
     onChange: (value: string[]) => void
-    onRemove: (value: string) => void
+    disabled?: boolean
 }
 
-export function ImageUpload({
-    value,
-    onChange,
-    onRemove
-}: ImageUploadProps) {
+export function ImageUpload({ value = [], onChange, disabled }: ImageUploadProps) {
     const [isUploading, setIsUploading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const storage = getStorage()
 
     const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
@@ -31,31 +27,76 @@ export function ImageUpload({
         const newUrls: string[] = []
 
         try {
+            const maxImages = 10
+            if (value.length >= maxImages) {
+                toast.error("Maximum images reached", {
+                    description: "You can upload up to 10 images."
+                })
+                return
+            }
+
+            // Ensure user is authenticated before uploading
+            try {
+                await getAccount().get()
+            } catch (authError) {
+                console.error("Authentication check failed:", authError)
+                toast.error("Authentication required", {
+                    description: "Please log in to upload images."
+                })
+                return
+            }
+
+            // Get storage instance
+            const storage = getStorage()
+
             for (const file of Array.from(files)) {
-                // simple validation
-                if (!file.type.startsWith("image/")) continue;
+                if (!file.type.startsWith("image/")) continue
+                if (file.size > 10 * 1024 * 1024) {
+                    toast.error("File too large", {
+                        description: "Please upload images smaller than 10MB."
+                    })
+                    continue
+                }
 
-                // Upload to Appwrite Storage
-                const result = await storage.createFile(
-                    BUCKETS.LISTING_IMAGES,
-                    ID.unique(),
-                    file
-                )
+                try {
+                    // Upload file to Appwrite Storage
+                    const result = await storage.createFile(
+                        BUCKETS.LISTING_IMAGES,
+                        ID.unique(),
+                        file
+                    )
 
-                // Get the file URL
-                const fileUrl = storage.getFileView(
-                    BUCKETS.LISTING_IMAGES,
-                    result.$id
-                )
+                    // Get the file URL
+                    const fileUrl = storage.getFileView(
+                        BUCKETS.LISTING_IMAGES,
+                        result.$id
+                    )
 
-                newUrls.push(fileUrl.toString())
+                    newUrls.push(fileUrl.toString())
+                    if (value.length + newUrls.length >= maxImages) break
+                } catch (uploadError) {
+                    console.error("Failed to upload file:", file.name, uploadError)
+                    toast.error(`Failed to upload ${file.name}`, {
+                        description: uploadError instanceof Error ? uploadError.message : "Upload failed"
+                    })
+                }
             }
 
             if (newUrls.length > 0) {
-                onChange([...value, ...newUrls])
+                const combined = [...value, ...newUrls].slice(0, maxImages)
+                onChange(combined)
+                toast.success(`Uploaded ${newUrls.length} image${newUrls.length > 1 ? 's' : ''}`)
             }
         } catch (error) {
             console.error("Error uploading images:", error)
+            console.error("Error details:", {
+                bucketId: BUCKETS.LISTING_IMAGES,
+                fileType: files?.[0]?.type,
+                fileSize: files?.[0]?.size,
+                errorType: error?.constructor?.name,
+                errorMessage: error instanceof Error ? error.message : String(error),
+                errorStack: error instanceof Error ? error.stack : undefined
+            })
 
             if (error instanceof Error) {
                 if (error.message.includes('network')) {
@@ -67,21 +108,29 @@ export function ImageUpload({
                         description: "The upload is taking too long. Please try again with smaller images."
                     })
                 } else if (error.message.includes('401') || error.message.includes('unauthorized')) {
-                    toast.error("Upload failed", {
-                        description: "Please log in again to continue uploading images."
+                    toast.error("Authentication error", {
+                        description: "Please log in again and try uploading."
                     })
                 } else if (error.message.includes('413') || error.message.includes('size')) {
                     toast.error("File too large", {
-                        description: "Please upload images smaller than 5MB."
+                        description: "Please upload images smaller than 10MB."
+                    })
+                } else if (error.message.includes('bucket')) {
+                    toast.error("Storage error", {
+                        description: "Storage configuration issue. Please contact support."
+                    })
+                } else if (error.message.includes('permission')) {
+                    toast.error("Permission denied", {
+                        description: "You don't have permission to upload images."
                     })
                 } else {
                     toast.error("Upload failed", {
-                        description: error.message || "An unexpected error occurred. Please try again."
+                        description: error.message || "Something went wrong. Please try again."
                     })
                 }
             } else {
                 toast.error("Upload failed", {
-                    description: "Something went wrong during upload. Please try again."
+                    description: "Something went wrong. Please try again."
                 })
             }
         } finally {
@@ -90,6 +139,11 @@ export function ImageUpload({
                 fileInputRef.current.value = ""
             }
         }
+    }
+
+    const onRemove = (url: string) => {
+        const filtered = value.filter((v) => v !== url)
+        onChange(filtered)
     }
 
     return (
@@ -130,17 +184,17 @@ export function ImageUpload({
                             <span className="font-semibold">Click to upload</span> or drag and drop
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                            SVG, PNG, JPG or GIF
+                            PNG, JPG, JPEG, WEBP, GIF up to 10MB each
                         </p>
                     </div>
                     <input
                         ref={fileInputRef}
                         type="file"
-                        className="hidden"
                         multiple
                         accept="image/*"
+                        className="hidden"
                         onChange={onUpload}
-                        disabled={isUploading}
+                        disabled={disabled || isUploading}
                     />
                 </label>
             </div>

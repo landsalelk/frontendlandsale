@@ -100,11 +100,24 @@ export class OpenRouterService {
           'Content-Type': 'application/json',
         },
         data,
+        timeout: 30000, // 30 second timeout
       });
 
       return response.data;
     } catch (error: any) {
       console.error('OpenRouter API Error:', error.response?.data || error.message);
+      
+      // More detailed error logging
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+        console.error('Response data:', error.response.data);
+      } else if (error.request) {
+        console.error('Request made but no response received:', error.request);
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
+      
       throw new Error(`OpenRouter API Error: ${error.response?.data?.error?.message || error.message}`);
     }
   }
@@ -128,11 +141,14 @@ export class OpenRouterService {
       throw new Error('OpenRouter API key is not configured');
     }
 
+    // Handle both client and server environments
+    const referer = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
-        'HTTP-Referer': window.location.origin,
+        'HTTP-Referer': referer,
         'X-Title': 'Landsale.lk AI Assistant',
         'Content-Type': 'application/json',
       },
@@ -146,7 +162,9 @@ export class OpenRouterService {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('OpenRouter streaming error response:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
 
     const reader = response.body?.getReader();

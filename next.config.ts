@@ -20,10 +20,16 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'cloud.appwrite.io',
+      },
+      {
+        protocol: 'https',
+        hostname: 'sgp.cloud.appwrite.io',
       }
     ],
   },
   output: 'standalone',
+  // Reduce source map noise in development
+  productionBrowserSourceMaps: false,
 };
 
 export default nextConfig;

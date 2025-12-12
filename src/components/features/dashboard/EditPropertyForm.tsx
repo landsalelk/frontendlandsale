@@ -526,7 +526,6 @@ export function EditPropertyForm({ property }: EditPropertyFormProps) {
                                                         <ImageUpload
                                                             value={field.value || []}
                                                             onChange={(newUrls) => field.onChange(newUrls)}
-                                                            onRemove={(urlToRemove) => field.onChange(field.value?.filter((url) => url !== urlToRemove))}
                                                         />
                                                     </FormControl>
                                                     <FormMessage />

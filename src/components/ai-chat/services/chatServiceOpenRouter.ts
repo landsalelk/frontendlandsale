@@ -89,10 +89,10 @@ export class ChatService {
       
       // Placeholder - you can integrate with browser's speech synthesis
       // or use a service like ElevenLabs, Azure Speech, etc.
-      console.log('Speech generation requested:', text);
+      console.log('Speech generation requested:', text ?? 'No text provided');
       return undefined;
     } catch (error) {
-      console.error('Failed to generate speech:', error);
+      console.error('Failed to generate speech:', error instanceof Error ? error.message : String(error));
       return undefined;
     }
   }
@@ -110,11 +110,11 @@ export class ChatService {
 
       // For image generation, we'll use a text-based approach for now
       // In production, you might want to integrate with DALL-E, Stable Diffusion, etc.
-      console.log('Image generation requested:', imagePrompt);
+      console.log('Image generation requested:', imagePrompt ?? 'No prompt provided');
       return undefined;
       
     } catch (error) {
-      console.error('Image generation/editing failed:', error);
+      console.error('Image generation/editing failed:', error instanceof Error ? error.message : String(error));
       return undefined;
     }
   }
@@ -183,7 +183,7 @@ export class ChatService {
         this.useMockService = false; // Reset mock flag on success
         console.log('✅ OpenRouter API succeeded');
       } catch (openRouterError) {
-        console.warn('❌ OpenRouter API failed, falling back to mock service:', openRouterError);
+        console.warn('❌ OpenRouter API failed, falling back to mock service:', openRouterError instanceof Error ? openRouterError.message : String(openRouterError));
         this.useMockService = true;
         
         // Use mock service as fallback
@@ -218,7 +218,7 @@ export class ChatService {
       };
       
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error sending message:', error instanceof Error ? error.message : String(error));
       return { 
         text: "I'm sorry, I'm having trouble processing your request. Please try again.",
         audio: undefined

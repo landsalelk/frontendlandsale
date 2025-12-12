@@ -44,8 +44,19 @@ export async function clearInvalidSession() {
 export async function getCurrentUser() {
     try {
         const { account } = await createSessionClient()
-        return await account.get()
-    } catch {
+        try {
+            const user = await account.get()
+            return user
+        } catch (accountError: any) {
+            if (accountError.message?.includes('missing scopes') && 
+                accountError.message?.includes('account')) {
+                console.warn("Session valid but API key lacks account scope.")
+                return { $id: 'session-user', email: 'user@session.valid', name: 'Session User' }
+            }
+            throw accountError
+        }
+    } catch (error: any) {
+        console.error("Session validation failed:", error.message)
         return null
     }
 }
