@@ -29,9 +29,48 @@ export default async function Home() {
         featuredProperties = response.documents.map((listing: any) => {
             // Transform new schema to old format for compatibility
             try {
-                const title = listing.title ? JSON.parse(listing.title).en : ''
-                const location = listing.location ? JSON.parse(listing.location) : {}
-                const attributes = listing.attributes ? JSON.parse(listing.attributes) : {}
+                // Safely parse JSON fields with fallback to plain text
+                let title = ''
+                let location = {}
+                let attributes = {}
+                
+                // Handle title field
+                if (listing.title) {
+                    try {
+                        const parsedTitle = JSON.parse(listing.title)
+                        title = parsedTitle.en || parsedTitle.toString() || listing.title
+                    } catch {
+                        // If JSON parsing fails, use as plain text
+                        title = listing.title
+                    }
+                }
+                
+                // Handle location field
+                if (listing.location) {
+                    try {
+                        location = JSON.parse(listing.location)
+                    } catch {
+                        // If JSON parsing fails, create a basic location object
+                        location = { 
+                            region: listing.location,
+                            city: listing.location 
+                        }
+                    }
+                }
+                
+                // Handle attributes field
+                if (listing.attributes) {
+                    try {
+                        attributes = JSON.parse(listing.attributes)
+                    } catch {
+                        // If JSON parsing fails, create basic attributes
+                        attributes = { 
+                            size: listing.attributes,
+                            bedrooms: 0,
+                            bathrooms: 0 
+                        }
+                    }
+                }
                 
                 return {
                     ...listing,

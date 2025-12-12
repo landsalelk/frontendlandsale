@@ -85,14 +85,18 @@ export class OpenRouterService {
       throw new Error('OpenRouter API key is not configured');
     }
 
+    // Handle both client and server environments
+    const referer = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const title = typeof window !== 'undefined' ? 'Landsale.lk AI Assistant' : 'Landsale.lk AI Assistant';
+
     try {
       const response = await axios({
         method: 'POST',
         url: `${this.baseURL}${endpoint}`,
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Landsale.lk AI Assistant',
+          'HTTP-Referer': referer,
+          'X-Title': title,
           'Content-Type': 'application/json',
         },
         data,

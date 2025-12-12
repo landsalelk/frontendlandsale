@@ -151,11 +151,59 @@ export async function getPropertyForEdit(propertyId: string) {
         }
 
         // Transform new schema back to old format for compatibility
-        const title = property.title ? JSON.parse(property.title).en : ''
-        const description = property.description ? JSON.parse(property.description).en : ''
-        const location = property.location ? JSON.parse(property.location) : {}
-        const contact = property.contact ? JSON.parse(property.contact) : {}
-        const attributes = property.attributes ? JSON.parse(property.attributes) : {}
+        // Safely parse JSON fields with fallback to plain text
+        let title = ''
+        let description = ''
+        let location = {}
+        let contact = {}
+        let attributes = {}
+        
+        // Handle title field
+        if (property.title) {
+            try {
+                const parsedTitle = JSON.parse(property.title)
+                title = parsedTitle.en || parsedTitle.toString() || property.title
+            } catch {
+                title = property.title
+            }
+        }
+        
+        // Handle description field
+        if (property.description) {
+            try {
+                const parsedDescription = JSON.parse(property.description)
+                description = parsedDescription.en || parsedDescription.toString() || property.description
+            } catch {
+                description = property.description
+            }
+        }
+        
+        // Handle location field
+        if (property.location) {
+            try {
+                location = JSON.parse(property.location)
+            } catch {
+                location = { region: property.location, city: property.location, address: property.location }
+            }
+        }
+        
+        // Handle contact field
+        if (property.contact) {
+            try {
+                contact = JSON.parse(property.contact)
+            } catch {
+                contact = { name: property.contact, phone: property.contact, whatsapp: property.contact }
+            }
+        }
+        
+        // Handle attributes field
+        if (property.attributes) {
+            try {
+                attributes = JSON.parse(property.attributes)
+            } catch {
+                attributes = { size: property.attributes, bedrooms: 0, bathrooms: 0 }
+            }
+        }
 
         return {
             ...property,
@@ -275,9 +323,38 @@ export async function getSimilarProperties(propertyId: string, type: string, dis
 
         // Transform new schema back to old format for compatibility
         return response.documents.map(property => {
-            const title = property.title ? JSON.parse(property.title).en : ''
-            const location = property.location ? JSON.parse(property.location) : {}
-            const attributes = property.attributes ? JSON.parse(property.attributes) : {}
+            // Safely parse JSON fields with fallback to plain text
+            let title = ''
+            let location = {}
+            let attributes = {}
+            
+            // Handle title field
+            if (property.title) {
+                try {
+                    const parsedTitle = JSON.parse(property.title)
+                    title = parsedTitle.en || parsedTitle.toString() || property.title
+                } catch {
+                    title = property.title
+                }
+            }
+            
+            // Handle location field
+            if (property.location) {
+                try {
+                    location = JSON.parse(property.location)
+                } catch {
+                    location = { region: property.location, city: property.location }
+                }
+            }
+            
+            // Handle attributes field
+            if (property.attributes) {
+                try {
+                    attributes = JSON.parse(property.attributes)
+                } catch {
+                    attributes = { size: property.attributes, bedrooms: 0, bathrooms: 0 }
+                }
+            }
 
             return {
                 ...property,

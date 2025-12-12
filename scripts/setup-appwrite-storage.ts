@@ -5,7 +5,11 @@
  * This script creates and configures storage buckets for the real estate application
  */
 
+import { config } from 'dotenv'
 import { Client, Storage, ID, Permission, Role } from 'node-appwrite'
+
+// Load environment variables from .env.local
+config({ path: '.env.local' })
 
 // Appwrite configuration
 const APPWRITE_ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1'
@@ -100,33 +104,31 @@ async function setupAppwriteStorage() {
                 if (existingBucketIds.includes(config.bucketId)) {
                     console.log(`🔄 Updating existing bucket: ${config.name} (${config.bucketId})`)
                     
-                    await storage.updateBucket(
-                        config.bucketId,
-                        config.name,
-                        config.description,
-                        config.permissions,
-                        true, // fileSecurity
-                        config.allowedFileExtensions,
-                        config.maximumFileSize,
-                        true, // encryption
-                        true  // antivirus
-                    )
+                    await storage.updateBucket({
+                        bucketId: config.bucketId,
+                        name: config.name,
+                        permissions: config.permissions,
+                        fileSecurity: true,
+                        allowedFileExtensions: config.allowedFileExtensions,
+                        maximumFileSize: config.maximumFileSize,
+                        encryption: true,
+                        antivirus: true
+                    })
                     
                     console.log(`✅ Updated bucket: ${config.name}`)
                 } else {
                     console.log(`➕ Creating new bucket: ${config.name} (${config.bucketId})`)
                     
-                    await storage.createBucket(
-                        config.bucketId,
-                        config.name,
-                        config.description,
-                        config.permissions,
-                        true, // fileSecurity
-                        config.allowedFileExtensions,
-                        config.maximumFileSize,
-                        true, // encryption
-                        true  // antivirus
-                    )
+                    await storage.createBucket({
+                        bucketId: config.bucketId,
+                        name: config.name,
+                        permissions: config.permissions,
+                        fileSecurity: true,
+                        allowedFileExtensions: config.allowedFileExtensions,
+                        maximumFileSize: config.maximumFileSize,
+                        encryption: true,
+                        antivirus: true
+                    })
                     
                     console.log(`✅ Created bucket: ${config.name}`)
                 }
@@ -142,8 +144,6 @@ async function setupAppwriteStorage() {
         console.log('\n📊 Storage Buckets Summary:')
         finalBuckets.buckets.forEach(bucket => {
             console.log(`  📁 ${bucket.name} (${bucket.$id})`)
-            console.log(`     Files: ${bucket.files}`)
-            console.log(`     Size: ${formatFileSize(bucket.size)}`)
             console.log(`     Extensions: ${bucket.allowedFileExtensions?.join(', ') || 'All'}`)
             console.log(`     Max Size: ${formatFileSize(bucket.maximumFileSize)}`)
             console.log('')
@@ -167,6 +167,8 @@ function formatFileSize(bytes: number): string {
 }
 
 // Run the setup
-if (import.meta.url === `file://${process.argv[1]}`) {
-    setupAppwriteStorage().catch(console.error)
-}
+console.log('🚀 Starting Appwrite Storage setup...')
+console.log('📍 Endpoint:', APPWRITE_ENDPOINT)
+console.log('📍 Project ID:', APPWRITE_PROJECT_ID)
+console.log('📍 API Key present:', !!APPWRITE_API_KEY)
+setupAppwriteStorage().catch(console.error)

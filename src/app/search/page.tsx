@@ -106,8 +106,27 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         if (query) {
             const lowerQuery = query.toLowerCase()
             dbProperties = dbProperties.filter(p => {
-                const title = p.title ? JSON.parse(p.title).en : ''
-                const location = p.location ? JSON.parse(p.location) : {}
+                // Safely parse title and location for filtering
+                let title = ''
+                let location = {}
+                
+                try {
+                    if (p.title) {
+                        const parsedTitle = JSON.parse(p.title)
+                        title = parsedTitle.en || parsedTitle.toString() || p.title
+                    }
+                } catch {
+                    title = p.title || ''
+                }
+                
+                try {
+                    if (p.location) {
+                        location = JSON.parse(p.location)
+                    }
+                } catch {
+                    location = { city: p.location, region: p.location }
+                }
+                
                 return (
                     title.toLowerCase().includes(lowerQuery) ||
                     location.city?.toLowerCase().includes(lowerQuery) ||
@@ -119,7 +138,14 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         if (city) {
             const lowerCity = city.toLowerCase()
             dbProperties = dbProperties.filter(p => {
-                const location = p.location ? JSON.parse(p.location) : {}
+                let location = {}
+                try {
+                    if (p.location) {
+                        location = JSON.parse(p.location)
+                    }
+                } catch {
+                    location = { city: p.location }
+                }
                 return location.city?.toLowerCase().includes(lowerCity)
             })
         }
@@ -127,9 +153,38 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         if (dbProperties.length > 0) {
             properties = dbProperties.map(p => {
                 try {
-                    const title = p.title ? JSON.parse(p.title).en : "Untitled Property"
-                    const location = p.location ? JSON.parse(p.location) : {}
-                    const attributes = p.attributes ? JSON.parse(p.attributes) : {}
+                    // Safely parse JSON fields with fallback to plain text
+                    let title = "Untitled Property"
+                    let location = {}
+                    let attributes = {}
+                    
+                    // Handle title field
+                    if (p.title) {
+                        try {
+                            const parsedTitle = JSON.parse(p.title)
+                            title = parsedTitle.en || parsedTitle.toString() || p.title
+                        } catch {
+                            title = p.title
+                        }
+                    }
+                    
+                    // Handle location field
+                    if (p.location) {
+                        try {
+                            location = JSON.parse(p.location)
+                        } catch {
+                            location = { city: p.location, region: p.location }
+                        }
+                    }
+                    
+                    // Handle attributes field
+                    if (p.attributes) {
+                        try {
+                            attributes = JSON.parse(p.attributes)
+                        } catch {
+                            attributes = { size: p.attributes, bedrooms: 0, bathrooms: 0 }
+                        }
+                    }
                     
                     return {
                         id: p.$id,

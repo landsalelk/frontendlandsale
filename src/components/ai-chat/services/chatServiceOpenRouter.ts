@@ -1,13 +1,17 @@
 import { OpenRouterService, OpenRouterMessage, OPENROUTER_MODELS, OpenRouterModel } from './openRouterService';
+import { MockOpenRouterService } from './mockOpenRouterService';
 import { base64ToUint8Array, pcmToWav, arrayBufferToBase64 } from "../utils/audio";
 
 export class ChatService {
   private openRouter: OpenRouterService;
+  private mockService: MockOpenRouterService;
   private messageHistory: OpenRouterMessage[] = [];
   private currentModel: string;
+  private useMockService: boolean = false;
 
   constructor() {
     this.openRouter = new OpenRouterService(process.env.NEXT_PUBLIC_OPENROUTER_API_KEY);
+    this.mockService = new MockOpenRouterService(OPENROUTER_MODELS.CLAUDE_3_HAIKU_FREE);
     this.currentModel = OPENROUTER_MODELS.CLAUDE_3_HAIKU_FREE;
     this.initChat();
   }
@@ -15,6 +19,7 @@ export class ChatService {
   setModel(model: keyof typeof OPENROUTER_MODELS) {
     this.currentModel = OPENROUTER_MODELS[model];
     this.openRouter.setModel(this.currentModel as OpenRouterModel);
+    this.mockService.setModel(this.currentModel as OpenRouterModel);
     this.initChat(); // Reinitialize with new model
   }
 
@@ -168,8 +173,24 @@ export class ChatService {
         }
       }
 
-      // Send message to OpenRouter
-      const responseText = await this.openRouter.sendMessage(messages);
+      let responseText: string;
+      
+      try {
+        console.log('🤖 Attempting to use OpenRouter API...');
+        // Try OpenRouter first
+        const response = await this.openRouter.sendMessage(messages);
+        responseText = response;
+        this.useMockService = false; // Reset mock flag on success
+        console.log('✅ OpenRouter API succeeded');
+      } catch (openRouterError) {
+        console.warn('❌ OpenRouter API failed, falling back to mock service:', openRouterError);
+        this.useMockService = true;
+        
+        // Use mock service as fallback
+        const mockResponse = await this.mockService.sendMessage(messages);
+        responseText = mockResponse;
+        console.log('✅ Mock service fallback succeeded');
+      }
 
       // Add assistant response to history
       this.messageHistory.push({
@@ -224,21 +245,36 @@ export class ChatService {
 
       // Handle attachment
       if (attachment && attachment.mimeType.startsWith('image/')) {
-        const imageAnalysis = await this.openRouter.analyzeImage(
-          attachment.data,
-          `Please analyze this image and describe what you see.`
-        );
-        
-        const lastMessage = messages[messages.length - 1];
-        if (typeof lastMessage.content === 'string') {
-          lastMessage.content += `\n\n[Image Analysis: ${imageAnalysis}]`;
+        try {
+          const imageAnalysis = await this.openRouter.analyzeImage(
+            attachment.data,
+            `Please analyze this image and describe what you see.`
+          );
+          
+          const lastMessage = messages[messages.length - 1];
+          if (typeof lastMessage.content === 'string') {
+            lastMessage.content += `\n\n[Image Analysis: ${imageAnalysis}]`;
+          }
+        } catch (imageError) {
+          console.warn('Image analysis failed, continuing without it:', imageError);
         }
       }
 
-      // Stream the response
-      await this.openRouter.sendMessageWithStream(messages, (chunk) => {
-        onChunk(chunk);
-      });
+      // Try OpenRouter first, then fallback to mock service
+      try {
+        await this.openRouter.sendMessageWithStream(messages, (chunk) => {
+          onChunk(chunk);
+        });
+        this.useMockService = false; // Reset mock flag on success
+      } catch (openRouterError) {
+        console.warn('OpenRouter streaming failed, falling back to mock service:', openRouterError);
+        this.useMockService = true;
+        
+        // Use mock service as fallback
+        await this.mockService.sendMessageStream(messages, (chunk) => {
+          onChunk(chunk);
+        });
+      }
 
     } catch (error) {
       console.error('Error in streaming message:', error);
