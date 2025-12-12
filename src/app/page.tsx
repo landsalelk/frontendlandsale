@@ -31,8 +31,8 @@ export default async function Home() {
             try {
                 // Safely parse JSON fields with fallback to plain text
                 let title = ''
-                let location = {}
-                let attributes = {}
+                let location: { region: string; city: string } = { region: '', city: '' }
+                let attributes: { size?: string; bedrooms?: number; bathrooms?: number } = {}
                 
                 // Handle title field
                 if (listing.title) {
@@ -48,7 +48,11 @@ export default async function Home() {
                 // Handle location field
                 if (listing.location) {
                     try {
-                        location = JSON.parse(listing.location)
+                        const parsedLocation = JSON.parse(listing.location)
+                        location = {
+                            region: parsedLocation.region || '',
+                            city: parsedLocation.city || ''
+                        }
                     } catch {
                         // If JSON parsing fails, create a basic location object
                         location = { 
@@ -56,12 +60,19 @@ export default async function Home() {
                             city: listing.location 
                         }
                     }
+                } else {
+                    location = { region: '', city: '' }
                 }
                 
                 // Handle attributes field
                 if (listing.attributes) {
                     try {
-                        attributes = JSON.parse(listing.attributes)
+                        const parsedAttributes = JSON.parse(listing.attributes)
+                        attributes = { 
+                            size: parsedAttributes.size || '',
+                            bedrooms: parsedAttributes.bedrooms || 0,
+                            bathrooms: parsedAttributes.bathrooms || 0
+                        }
                     } catch {
                         // If JSON parsing fails, create basic attributes
                         attributes = { 
@@ -70,6 +81,8 @@ export default async function Home() {
                             bathrooms: 0 
                         }
                     }
+                } else {
+                    attributes = { size: '', bedrooms: 0, bathrooms: 0 }
                 }
                 
                 return {

@@ -154,9 +154,9 @@ export async function getPropertyForEdit(propertyId: string) {
         // Safely parse JSON fields with fallback to plain text
         let title = ''
         let description = ''
-        let location = {}
-        let contact = {}
-        let attributes = {}
+        let location: { region: string; city: string; address?: string } = { region: '', city: '' }
+        let contact: { name?: string; phone?: string; whatsapp?: string } = {}
+        let attributes: { size?: string; bedrooms?: number; bathrooms?: number } = {}
         
         // Handle title field
         if (property.title) {
@@ -181,10 +181,17 @@ export async function getPropertyForEdit(propertyId: string) {
         // Handle location field
         if (property.location) {
             try {
-                location = JSON.parse(property.location)
+                const parsedLocation = JSON.parse(property.location)
+                location = {
+                    region: parsedLocation.region || '',
+                    city: parsedLocation.city || '',
+                    address: parsedLocation.address || ''
+                }
             } catch {
                 location = { region: property.location, city: property.location, address: property.location }
             }
+        } else {
+            location = { region: '', city: '', address: '' }
         }
         
         // Handle contact field
@@ -199,10 +206,17 @@ export async function getPropertyForEdit(propertyId: string) {
         // Handle attributes field
         if (property.attributes) {
             try {
-                attributes = JSON.parse(property.attributes)
+                const parsedAttributes = JSON.parse(property.attributes)
+                attributes = { 
+                    size: parsedAttributes.size || '',
+                    bedrooms: parsedAttributes.bedrooms || 0,
+                    bathrooms: parsedAttributes.bathrooms || 0
+                }
             } catch {
                 attributes = { size: property.attributes, bedrooms: 0, bathrooms: 0 }
             }
+        } else {
+            attributes = { size: '', bedrooms: 0, bathrooms: 0 }
         }
 
         return {
@@ -325,8 +339,8 @@ export async function getSimilarProperties(propertyId: string, type: string, dis
         return response.documents.map(property => {
             // Safely parse JSON fields with fallback to plain text
             let title = ''
-            let location = {}
-            let attributes = {}
+            let location: { region: string; city: string } = { region: '', city: '' }
+            let attributes: { size?: string; bedrooms?: number; bathrooms?: number } = {}
             
             // Handle title field
             if (property.title) {
@@ -341,19 +355,32 @@ export async function getSimilarProperties(propertyId: string, type: string, dis
             // Handle location field
             if (property.location) {
                 try {
-                    location = JSON.parse(property.location)
+                    const parsedLocation = JSON.parse(property.location)
+                    location = {
+                        region: parsedLocation.region || '',
+                        city: parsedLocation.city || ''
+                    }
                 } catch {
                     location = { region: property.location, city: property.location }
                 }
+            } else {
+                location = { region: '', city: '' }
             }
             
             // Handle attributes field
             if (property.attributes) {
                 try {
-                    attributes = JSON.parse(property.attributes)
+                    const parsedAttributes = JSON.parse(property.attributes)
+                    attributes = { 
+                        size: parsedAttributes.size || '',
+                        bedrooms: parsedAttributes.bedrooms || 0,
+                        bathrooms: parsedAttributes.bathrooms || 0
+                    }
                 } catch {
                     attributes = { size: property.attributes, bedrooms: 0, bathrooms: 0 }
                 }
+            } else {
+                attributes = { size: '', bedrooms: 0, bathrooms: 0 }
             }
 
             return {

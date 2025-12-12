@@ -108,7 +108,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             dbProperties = dbProperties.filter(p => {
                 // Safely parse title and location for filtering
                 let title = ''
-                let location = {}
+                let location: { region: string; city: string } = { region: '', city: '' }
                 
                 try {
                     if (p.title) {
@@ -121,7 +121,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                 
                 try {
                     if (p.location) {
-                        location = JSON.parse(p.location)
+                        const parsedLocation = JSON.parse(p.location)
+                        location = {
+                            region: parsedLocation.region || '',
+                            city: parsedLocation.city || ''
+                        }
                     }
                 } catch {
                     location = { city: p.location, region: p.location }
@@ -138,13 +142,17 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         if (city) {
             const lowerCity = city.toLowerCase()
             dbProperties = dbProperties.filter(p => {
-                let location = {}
+                let location: { region: string; city: string } = { region: '', city: '' }
                 try {
                     if (p.location) {
-                        location = JSON.parse(p.location)
+                        const parsedLocation = JSON.parse(p.location)
+                        location = {
+                            region: parsedLocation.region || '',
+                            city: parsedLocation.city || ''
+                        }
                     }
                 } catch {
-                    location = { city: p.location }
+                    location = { city: p.location, region: '' }
                 }
                 return location.city?.toLowerCase().includes(lowerCity)
             })
@@ -155,8 +163,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                 try {
                     // Safely parse JSON fields with fallback to plain text
                     let title = "Untitled Property"
-                    let location = {}
-                    let attributes = {}
+                    let location: { region: string; city: string } = { region: '', city: '' }
+                    let attributes: { size?: string; bedrooms?: number; bathrooms?: number } = {}
                     
                     // Handle title field
                     if (p.title) {
@@ -171,10 +179,16 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                     // Handle location field
                     if (p.location) {
                         try {
-                            location = JSON.parse(p.location)
+                            const parsedLocation = JSON.parse(p.location)
+                            location = {
+                                region: parsedLocation.region || '',
+                                city: parsedLocation.city || ''
+                            }
                         } catch {
                             location = { city: p.location, region: p.location }
                         }
+                    } else {
+                        location = { region: '', city: '' }
                     }
                     
                     // Handle attributes field

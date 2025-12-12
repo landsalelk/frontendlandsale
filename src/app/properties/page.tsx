@@ -114,7 +114,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
             dbProperties = dbProperties.filter(p => {
                 // Safely parse title and location for filtering
                 let title = ''
-                let location = {}
+                let location: { region: string; city: string } = { region: '', city: '' }
                 
                 try {
                     if (p.title) {
@@ -127,7 +127,11 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
                 
                 try {
                     if (p.location) {
-                        location = JSON.parse(p.location)
+                        const parsedLocation = JSON.parse(p.location)
+                        location = {
+                            region: parsedLocation.region || '',
+                            city: parsedLocation.city || ''
+                        }
                     }
                 } catch {
                     location = { city: p.location, region: p.location }
@@ -144,13 +148,17 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
         if (city) {
             const lowerCity = city.toLowerCase()
             dbProperties = dbProperties.filter(p => {
-                let location = {}
+                let location: { region: string; city: string } = { region: '', city: '' }
                 try {
                     if (p.location) {
-                        location = JSON.parse(p.location)
+                        const parsedLocation = JSON.parse(p.location)
+                        location = {
+                            region: parsedLocation.region || '',
+                            city: parsedLocation.city || ''
+                        }
                     }
                 } catch {
-                    location = { city: p.location }
+                    location = { city: p.location, region: '' }
                 }
                 return location.city?.toLowerCase().includes(lowerCity)
             })
@@ -161,8 +169,8 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
                 try {
                     // Safely parse JSON fields with fallback to plain text
                     let title = "Untitled Property"
-                    let location = {}
-                    let attributes = {}
+                    let location: { region: string; city: string } = { region: '', city: '' }
+                    let attributes: { size?: string; bedrooms?: number; bathrooms?: number } = {}
                     
                     // Handle title field
                     if (p.title) {
@@ -177,19 +185,32 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
                     // Handle location field
                     if (p.location) {
                         try {
-                            location = JSON.parse(p.location)
+                            const parsedLocation = JSON.parse(p.location)
+                            location = {
+                                region: parsedLocation.region || '',
+                                city: parsedLocation.city || ''
+                            }
                         } catch {
                             location = { city: p.location, region: p.location }
                         }
+                    } else {
+                        location = { region: '', city: '' }
                     }
                     
                     // Handle attributes field
                     if (p.attributes) {
                         try {
-                            attributes = JSON.parse(p.attributes)
+                            const parsedAttributes = JSON.parse(p.attributes)
+                            attributes = { 
+                                size: parsedAttributes.size || '',
+                                bedrooms: parsedAttributes.bedrooms || 0,
+                                bathrooms: parsedAttributes.bathrooms || 0
+                            }
                         } catch {
                             attributes = { size: p.attributes, bedrooms: 0, bathrooms: 0 }
                         }
+                    } else {
+                        attributes = { size: '', bedrooms: 0, bathrooms: 0 }
                     }
                     
                     return {
