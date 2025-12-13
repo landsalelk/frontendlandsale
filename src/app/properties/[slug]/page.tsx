@@ -23,6 +23,11 @@ import { PropertyImageGallery } from "@/components/features/properties/PropertyI
 import { SimilarProperties } from "@/components/features/properties/SimilarProperties"
 import { getSimilarProperties, incrementPropertyViews } from "@/lib/actions/property"
 
+// New Psychological Trigger Components
+import LiveViewCounter from "@/components/features/properties/LiveViewCounter"
+import AiFutureVision from "@/components/features/properties/AiFutureVision"
+import SmartNotification from "@/components/features/properties/SmartNotification"
+
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
 
@@ -165,6 +170,10 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
             />
+
+            {/* GLOBAL URGENCY NOTIFICATION (Sticky/Fixed) */}
+            <SmartNotification />
+
             <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
                 {/* Breadcrumb / Top Actions */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -192,6 +201,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                         {/* Title & Key Info */}
                         <div>
                             <div className="flex flex-col gap-2">
+                                {/* FOMO TRIGGER: Live View Counter */}
+                                <LiveViewCounter />
+
                                 <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">{property.title}</h1>
                                 <div className="flex items-center text-muted-foreground">
                                     <MapPin className="h-4 w-4 mr-1 text-emerald-500" />
@@ -234,6 +246,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                                 {property.description}
                             </div>
                         </div>
+
+                        {/* VISUAL CRAVING: AI Future Vision (Only for Land) */}
+                        <AiFutureVision
+                            propertyType={property.type}
+                            propertyTitle={property.title}
+                            location={property.city}
+                        />
 
                         <Separator />
 

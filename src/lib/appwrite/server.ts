@@ -68,7 +68,7 @@ export async function createAdminClient() {
 export async function getCurrentUser() {
     try {
         const { account } = await createSessionClient()
-        
+
         // Try to get user info, but handle permission issues gracefully
         try {
             const user = await account.get()
@@ -77,11 +77,11 @@ export async function getCurrentUser() {
             // If we get a scope error, it might mean the session is valid but 
             // the API key doesn't have account scope. In this case, 
             // we should still consider the session valid for database operations.
-            if (accountError.message?.includes('missing scopes') && 
+            if (accountError.message?.includes('missing scopes') &&
                 accountError.message?.includes('account')) {
                 console.warn("Session valid but API key lacks account scope. Session still usable for database operations.")
                 // Return a minimal user object to indicate session is valid
-                return { 
+                return {
                     $id: 'session-user',
                     email: 'user@session.valid',
                     name: 'Session User'
@@ -90,6 +90,10 @@ export async function getCurrentUser() {
             throw accountError
         }
     } catch (error: any) {
+        // expected behavior for guest users
+        if (error.message === 'No session found' || error.message?.includes('No session found')) {
+            return null
+        }
         console.error("Session validation failed:", error.message)
         return null
     }
@@ -101,7 +105,7 @@ export async function getCurrentUser() {
 export async function validateDatabaseSession() {
     try {
         const { databases } = await createSessionClient()
-        
+
         // Try a simple database operation to validate session
         try {
             // This will fail if session is invalid
@@ -124,30 +128,30 @@ export const COLLECTIONS = {
     // Core listings
     LISTINGS: process.env.NEXT_PUBLIC_APPWRITE_LISTINGS_COLLECTION_ID || 'listings',
     CATEGORIES: process.env.NEXT_PUBLIC_APPWRITE_CATEGORIES_COLLECTION_ID || 'categories',
-    
+
     // User management
     USERS_EXTENDED: process.env.NEXT_PUBLIC_APPWRITE_USERS_EXTENDED_COLLECTION_ID || 'users_extended',
     FAVORITES: process.env.NEXT_PUBLIC_APPWRITE_FAVORITES_COLLECTION_ID || 'favorites',
     SAVED_SEARCHES: process.env.NEXT_PUBLIC_APPWRITE_SAVED_SEARCHES_COLLECTION_ID || 'saved_searches',
     USER_WALLETS: process.env.NEXT_PUBLIC_APPWRITE_USER_WALLETS_COLLECTION_ID || 'user_wallets',
-    
+
     // Location hierarchy
     COUNTRIES: process.env.NEXT_PUBLIC_APPWRITE_COUNTRIES_COLLECTION_ID || 'countries',
     REGIONS: process.env.NEXT_PUBLIC_APPWRITE_REGIONS_COLLECTION_ID || 'regions',
     CITIES: process.env.NEXT_PUBLIC_APPWRITE_CITIES_COLLECTION_ID || 'cities',
     AREAS: process.env.NEXT_PUBLIC_APPWRITE_AREAS_COLLECTION_ID || 'areas',
-    
+
     // Reviews and interactions
     REVIEWS: process.env.NEXT_PUBLIC_APPWRITE_REVIEWS_COLLECTION_ID || 'reviews',
     LISTING_OFFERS: process.env.NEXT_PUBLIC_APPWRITE_LISTING_OFFERS_COLLECTION_ID || 'listing_offers',
-    
+
     // Content management
     CMS_PAGES: process.env.NEXT_PUBLIC_APPWRITE_CMS_PAGES_COLLECTION_ID || 'cms_pages',
     BLOG_POSTS: process.env.NEXT_PUBLIC_APPWRITE_BLOG_POSTS_COLLECTION_ID || 'blog_posts',
     FAQS: process.env.NEXT_PUBLIC_APPWRITE_FAQS_COLLECTION_ID || 'faqs',
     SEO_META: process.env.NEXT_PUBLIC_APPWRITE_SEO_META_COLLECTION_ID || 'seo_meta',
     SETTINGS: process.env.NEXT_PUBLIC_APPWRITE_SETTINGS_COLLECTION_ID || 'settings',
-    
+
     // Transactions
     TRANSACTIONS: process.env.NEXT_PUBLIC_APPWRITE_TRANSACTIONS_COLLECTION_ID || 'transactions',
 }

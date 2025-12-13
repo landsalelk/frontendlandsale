@@ -190,11 +190,21 @@ export async function POST(request: NextRequest) {
             features
         });
 
-        // GENERATE REAL AI IMAGE using Pollinations AI (YouTube Thumbnail Style)
-        // 16:9 aspect ratio (1280x720) with high contrast and eye-catching style
-        const thumbnailPrompt = imagePrompt + ", YouTube thumbnail style, high contrast, vibrant colors, eye catching, dramatic lighting, 8k, photorealistic";
+        // Format price for the image text
+        const formatPriceForImage = (price: number) => {
+            if (price >= 1000000) return (price / 1000000).toFixed(1).replace(/\.0$/, '') + "M";
+            if (price >= 1000) return (price / 1000).toFixed(0) + "K";
+            return price.toString();
+        };
+        const priceText = `LKR ${formatPriceForImage(Number(price))}`;
+
+        // GENERATE REAL AI IMAGE using Pollinations AI (YouTube Thumbnail Style + TEXT)
+        // We ask the AI to render the price on a sign
+        const thumbnailPrompt = imagePrompt + `, featuring a modern real estate sign board in the foreground with clear text "${priceText}", YouTube thumbnail style, high contrast, vibrant colors, dramatic lighting, 8k`;
+
         const encodedPrompt = encodeURIComponent(thumbnailPrompt);
-        const aiGeneratedImage = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&nologo=true&seed=${Date.now()}`;
+        // Using model=flux because it handles text better than default models
+        const aiGeneratedImage = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&nologo=true&model=flux&seed=${Date.now()}`;
 
         // Use the AI generated image
         const finalImages = images && images.length > 0 ? images : [aiGeneratedImage];
