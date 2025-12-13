@@ -9,9 +9,14 @@ interface LiquidBtmNavProps {
     price: string;
     phone: string;
     whatsapp?: string;
+    sellerId: string;
+    propertyId: string;
+    propertyTitle: string;
 }
 
-export default function LiquidBtmNav({ price, phone, whatsapp }: LiquidBtmNavProps) {
+import { notifySellerOfInterest } from "@/lib/actions/notifications";
+
+export default function LiquidBtmNav({ price, phone, whatsapp, sellerId, propertyId, propertyTitle }: LiquidBtmNavProps) {
     const { scrollY } = useScroll();
     const scrollVelocity = useVelocity(scrollY);
 
@@ -34,6 +39,19 @@ export default function LiquidBtmNav({ price, phone, whatsapp }: LiquidBtmNavPro
         });
     }, [smoothVelocity]);
 
+    const handleAction = async (type: 'call' | 'whatsapp') => {
+        try {
+            await notifySellerOfInterest({
+                sellerId,
+                propertyId,
+                propertyTitle,
+                actionType: type
+            })
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
     return (
         <motion.div
             className="fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none"
@@ -50,7 +68,7 @@ export default function LiquidBtmNav({ price, phone, whatsapp }: LiquidBtmNavPro
                     <div className="flex items-center gap-3">
                         <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm whitespace-nowrap">{price}</span>
                         <div className="h-4 w-px bg-slate-300" />
-                        <Button size="icon" className="h-8 w-8 rounded-full bg-emerald-600 hover:bg-emerald-700" asChild>
+                        <Button size="icon" className="h-8 w-8 rounded-full bg-emerald-600 hover:bg-emerald-700" onClick={() => handleAction('call')} asChild>
                             <a href={`tel:${phone}`}>
                                 <Phone className="h-4 w-4" />
                             </a>
@@ -64,14 +82,14 @@ export default function LiquidBtmNav({ price, phone, whatsapp }: LiquidBtmNavPro
                             <span className="font-bold text-slate-900 dark:text-slate-100">{price}</span>
                         </div>
 
-                        <Button className="rounded-full bg-emerald-600 hover:bg-emerald-700 px-6" asChild>
+                        <Button className="rounded-full bg-emerald-600 hover:bg-emerald-700 px-6" onClick={() => handleAction('call')} asChild>
                             <a href={`tel:${phone}`}>
                                 <Phone className="mr-2 h-4 w-4" /> Call Seller
                             </a>
                         </Button>
 
                         {whatsapp && (
-                            <Button variant="outline" size="icon" className="rounded-full border-green-500 text-green-600 hover:bg-green-50" asChild>
+                            <Button variant="outline" size="icon" className="rounded-full border-green-500 text-green-600 hover:bg-green-50" onClick={() => handleAction('whatsapp')} asChild>
                                 <a href={`https://wa.me/${whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                                     <MessageCircle className="h-4 w-4" />
                                 </a>

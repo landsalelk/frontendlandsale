@@ -33,6 +33,7 @@ import RoiCalculator from "@/components/features/properties/RoiCalculator"
 import TrustBadge from "@/components/features/properties/TrustBadge"
 import DeedStatus from "@/components/features/properties/DeedStatus"
 import LiquidBtmNav from "@/components/features/properties/LiquidBtmNav"
+import { QuickQuestionButtons } from "@/components/features/properties/QuickQuestionButtons"
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
@@ -190,6 +191,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                 price={formattedPrice}
                 phone={property.contact_phone || ""}
                 whatsapp={property.whatsapp || property.contact_phone}
+                sellerId={property.user_id}
+                propertyId={property.$id}
+                propertyTitle={property.title}
             />
 
             <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -362,6 +366,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                                             <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp
                                         </a>
                                     </Button>
+                                )}
+
+                                {(property.whatsapp || property.contact_phone) && (
+                                    <QuickQuestionButtons
+                                        phone={property.whatsapp || property.contact_phone}
+                                        title={property.title}
+                                        sellerId={property.user_id}
+                                        propertyId={property.$id}
+                                    />
                                 )}
                             </CardContent>
                         </Card>

@@ -23,7 +23,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { SlidersHorizontal, X, Filter, ArrowUpDown } from "lucide-react"
+import { SlidersHorizontal, X, Filter, ArrowUpDown, SearchX } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Badge } from "@/components/ui/badge"
 import { CityAutocomplete } from "@/components/ui/city-autocomplete"
 import { getRegions } from "@/lib/actions/location"
@@ -401,29 +402,28 @@ export default function SearchClient({ initialProperties }: { initialProperties:
                             />
                         ))}
                     </motion.div>
+
+
                     {sortedProperties.length === 0 && (
-                        <div className="col-span-full flex flex-col items-center justify-center py-20 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border">
-                            <div className="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-6">
-                                <svg className="w-12 h-12 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">No Properties Found</h3>
-                            <p className="max-w-sm text-center text-slate-500 dark:text-slate-400 mb-6">
-                                We couldn't find any properties matching your filters. Try adjusting your search criteria or explore all available listings.
-                            </p>
-                            <div className="flex gap-3">
-                                <Button variant="outline" onClick={clearFilters} className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
-                                    Clear Filters
-                                </Button>
-                                <Button onClick={() => router.push('/')} variant="ghost">
-                                    Browse All
-                                </Button>
-                            </div>
-                        </div>
+                        <EmptyState
+                            icon={SearchX}
+                            title="No Properties Found"
+                            description="We couldn't find any properties matching your filters. Try adjusting your search criteria or explore all available listings."
+                            action={{
+                                label: "Clear Filters",
+                                onClick: clearFilters,
+                                variant: "outline"
+                            }}
+                            secondaryAction={{
+                                label: "Browse All",
+                                onClick: () => router.push('/'),
+                                variant: "ghost"
+                            }}
+                            className="col-span-full mt-8"
+                        />
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

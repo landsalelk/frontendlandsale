@@ -6,8 +6,8 @@ import { Bed, Bath, Ruler, MapPin, Heart, Eye } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { cn, formatPrice, getPropertyImageUrl } from "@/lib/utils"
-// We'll assume a Button component exists, or use a motion.button
 import { Button } from "@/components/ui/button"
+import { VerifiedBadge } from "./VerifiedBadge"
 
 // Types
 export interface Property {
@@ -23,6 +23,7 @@ export interface Property {
   type: "land" | "house" | "commercial"
   featured?: boolean
   views?: number
+  verified?: boolean // "Verified by Landsale" status
 }
 
 interface InteractivePropertyCardProps {
@@ -165,7 +166,7 @@ export const InteractivePropertyCard = React.memo(({ property, className }: Inte
           </motion.div>
 
           {/* Overlays */}
-          <div className="absolute top-4 left-4 z-10">
+          <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -178,6 +179,7 @@ export const InteractivePropertyCard = React.memo(({ property, className }: Inte
             >
               {property.type}
             </motion.div>
+            {property.verified && <VerifiedBadge />}
           </div>
 
           <div className="absolute top-4 right-4 z-10">

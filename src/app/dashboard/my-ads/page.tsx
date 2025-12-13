@@ -1,4 +1,5 @@
 import { getCurrentUser, createSessionClient, DATABASE_ID, COLLECTIONS } from "@/lib/appwrite/server"
+import { transformListingToProperty } from "@/lib/utils"
 import { DashboardPropertyCard } from "@/components/features/dashboard/DashboardPropertyCard"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -27,76 +28,8 @@ export default async function MyAdsPage() {
             ]
         )
         properties = response.documents.map((listing: any) => {
-            // Transform new schema to old format for compatibility
             try {
-                // Safely parse JSON fields with fallback to plain text
-                let title = ''
-                let location: { region: string; city: string } = { region: '', city: '' }
-                let attributes: { size?: string; bedrooms?: number; bathrooms?: number } = {}
-                
-                // Handle title field
-                if (listing.title) {
-                    try {
-                        const parsedTitle = JSON.parse(listing.title)
-                        title = parsedTitle.en || parsedTitle.toString() || listing.title
-                    } catch {
-                        // If JSON parsing fails, use as plain text
-                        title = listing.title
-                    }
-                }
-                
-                // Handle location field
-                if (listing.location) {
-                    try {
-                        const parsedLocation = JSON.parse(listing.location)
-                        location = {
-                            region: parsedLocation.region || '',
-                            city: parsedLocation.city || ''
-                        }
-                    } catch {
-                        // If JSON parsing fails, create a basic location object
-                        location = { 
-                            region: '',
-                            city: '' 
-                        }
-                    }
-                } else {
-                    location = { region: '', city: '' }
-                }
-                
-                // Handle attributes field
-                if (listing.attributes) {
-                    try {
-                        const parsedAttributes = JSON.parse(listing.attributes)
-                        attributes = { 
-                            size: parsedAttributes.size || '',
-                            bedrooms: parsedAttributes.bedrooms || 0,
-                            bathrooms: parsedAttributes.bathrooms || 0
-                        }
-                    } catch {
-                        // If JSON parsing fails, create basic attributes
-                        attributes = { 
-                            size: '',
-                            bedrooms: 0,
-                            bathrooms: 0 
-                        }
-                    }
-                } else {
-                    attributes = { size: '', bedrooms: 0, bathrooms: 0 }
-                }
-                
-                return {
-                    ...listing,
-                    title,
-                    type: listing.listing_type === 'sale' ? 'land' : listing.listing_type,
-                    district: location.region || '',
-                    city: location.city || '',
-                    price: listing.price ? listing.price / 100 : 0,
-                    size: attributes.size || '',
-                    bedrooms: attributes.bedrooms || 0,
-                    bathrooms: attributes.bathrooms || 0,
-                    views: listing.views_count || 0,
-                }
+                return transformListingToProperty(listing)
             } catch (error) {
                 console.error("Error transforming listing:", error)
                 return listing

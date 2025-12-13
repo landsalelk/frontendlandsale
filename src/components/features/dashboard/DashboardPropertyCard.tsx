@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { MoreHorizontal, Pencil, Trash2, Eye, MapPin, Loader2, Home, Trees, Building } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { AdHealthDashboard } from "./AdHealthDashboard"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -36,6 +37,7 @@ interface Property {
     bedrooms?: number
     bathrooms?: number
     created_at: string
+    description?: string
 }
 
 
@@ -77,6 +79,7 @@ export function DashboardPropertyCard({ property }: { property: Property }) {
     const [isDeleting, setIsDeleting] = useState(false)
     const [imageLoading, setImageLoading] = useState(true)
     const [imageError, setImageError] = useState(false)
+    const [isHealthOpen, setIsHealthOpen] = useState(false)
 
     const handleDelete = async () => {
         if (!confirm("Are you sure you want to delete this listing?")) return
@@ -234,10 +237,18 @@ export function DashboardPropertyCard({ property }: { property: Property }) {
 
                 <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-3 mt-auto">
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1" title="Views">
-                            <Eye className="w-4 h-4" />
-                            <span>{property.views || 0}</span>
-                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 hover:bg-transparent hover:text-primary transition-colors flex items-center gap-1 group/health"
+                            onClick={() => setIsHealthOpen(true)}
+                        >
+                            <div className="flex items-center gap-1" title="Click to view detailed analytics">
+                                <Eye className="w-4 h-4 group-hover/health:translate-x-0.5 transition-transform" />
+                                <span className="font-medium underline decoration-dotted underline-offset-4">{property.views || 0} views</span>
+                            </div>
+                        </Button>
+
                         {property.features && property.features.length > 0 && (
                             <div className="flex items-center gap-1" title="Features">
                                 <span className="text-xs bg-muted px-2 py-1 rounded">
@@ -255,6 +266,12 @@ export function DashboardPropertyCard({ property }: { property: Property }) {
                     </div>
                 </div>
             </div>
+
+            <AdHealthDashboard
+                property={property}
+                open={isHealthOpen}
+                onOpenChange={setIsHealthOpen}
+            />
         </div>
     )
 }

@@ -1,5 +1,5 @@
 // Server-side Appwrite client for Next.js Server Components and Server Actions
-import { Client, Account, Databases, Storage, Users } from 'node-appwrite'
+import { Client, Account, Databases, Storage, Users, Messaging } from 'node-appwrite'
 import { cookies } from 'next/headers'
 
 const APPWRITE_ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || ''
@@ -59,6 +59,7 @@ export async function createAdminClient() {
         get databases() { return new Databases(client) },
         get storage() { return new Storage(client) },
         get users() { return new Users(client) },
+        get messaging() { return new Messaging(client) },
     }
 }
 

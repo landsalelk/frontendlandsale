@@ -103,5 +103,6 @@ export function transformListingToProperty(listing: any) {
     images: finalImages,
     priceNegotiable: listing.price_negotiable || false,
     status: listing.status,
+    verified: listing.is_verified === true, // Map DB field to UI expectation
   }
 }
