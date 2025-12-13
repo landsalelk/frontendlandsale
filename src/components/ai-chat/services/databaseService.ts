@@ -20,6 +20,24 @@ export interface Property {
   updated_at: string
 }
 
+// Interface matching the actual Appwrite listings schema
+export interface ListingDocument {
+  title: string           // JSON: {"en": "title text"}
+  description: string     // JSON: {"en": "description text"}
+  listing_type: string    // "sale" | "rent"
+  price: number           // Price in cents (multiply by 100)
+  location: string        // JSON: {"region": "district", "city": "city", "address": "address"}
+  contact: string         // JSON: {"name": "name", "phone": "phone", "whatsapp": "whatsapp"}
+  attributes: string      // JSON: {"size": "25 perches", "bedrooms": 0, "bathrooms": 0}
+  images: string[]        // Array of image paths
+  features: string[]      // Array of feature strings
+  status: string          // "active" | "sold" | "pending"
+  user_id: string
+  views_count?: number
+  price_negotiable?: boolean
+  is_featured?: boolean
+}
+
 export interface ChatMessage {
   id: string
   user_id: string
@@ -46,6 +64,26 @@ export interface DatabaseResponse<T> {
   count?: number
 }
 
+export interface CreateListingInput {
+  title: string
+  description: string
+  property_type: 'house' | 'apartment' | 'condo' | 'townhouse' | 'land'
+  price: number
+  district?: string
+  city?: string
+  address?: string
+  land_size?: number
+  land_unit?: string
+  bedrooms?: number
+  bathrooms?: number
+  features: string[]
+  images: string[]
+  contact_name?: string
+  contact_phone?: string
+  contact_whatsapp?: string
+  user_id: string
+}
+
 export class DatabaseService {
   private static instance: DatabaseService
 
@@ -56,20 +94,115 @@ export class DatabaseService {
     return DatabaseService.instance
   }
 
-  // Properties CRUD Operations
-  async createProperty(property: Omit<Property, 'id' | 'created_at' | 'updated_at'>): Promise<DatabaseResponse<Property>> {
+  // Create a listing in the correct Appwrite schema format
+  async createListing(input: CreateListingInput): Promise<DatabaseResponse<{ id: string; url: string }>> {
     try {
       const databases = getDatabases()
+
+      // Format title as JSON
+      const titleJson = JSON.stringify({ en: input.title })
+
+      // Format description as JSON
+      const descriptionJson = JSON.stringify({ en: input.description })
+
+      // Format location as JSON
+      const locationJson = JSON.stringify({
+        region: input.district || '',
+        city: input.city || '',
+        address: input.address || ''
+      })
+
+      // Format contact as JSON
+      const contactJson = JSON.stringify({
+        name: input.contact_name || '',
+        phone: input.contact_phone || '',
+        whatsapp: input.contact_whatsapp || input.contact_phone || ''
+      })
+
+      // Format attributes as JSON
+      const sizeStr = input.land_size
+        ? `${input.land_size} ${input.land_unit || 'perches'}`
+        : ''
+      const attributesJson = JSON.stringify({
+        size: sizeStr,
+        bedrooms: input.bedrooms || 0,
+        bathrooms: input.bathrooms || 0
+      })
+
+      // Convert price to cents
+      const priceInCents = Math.round(input.price * 100)
+
+      // Map property type to listing type
+      const listingType = 'sale' // All AI chat listings are for sale
+
+      const documentData: Partial<ListingDocument> = {
+        title: titleJson,
+        description: descriptionJson,
+        listing_type: listingType,
+        price: priceInCents,
+        location: locationJson,
+        contact: contactJson,
+        attributes: attributesJson,
+        images: input.images || [],
+        features: input.features || [],
+        status: 'active',
+        user_id: input.user_id,
+        views_count: 0,
+        price_negotiable: true,
+        is_featured: false
+      }
+
       const doc = await databases.createDocument(
         DATABASE_ID,
         COLLECTIONS.LISTINGS,
         ID.unique(),
-        {
-          ...property,
-        }
+        documentData
       )
 
-      return { data: this.mapDocToProperty(doc), error: null }
+      return {
+        data: {
+          id: doc.$id,
+          url: `/properties/${doc.$id}`
+        },
+        error: null
+      }
+    } catch (error) {
+      console.error('Error creating listing:', error)
+      return { data: null, error: error as Error }
+    }
+  }
+
+  // Properties CRUD Operations (legacy - keeping for compatibility)
+  async createProperty(property: Omit<Property, 'id' | 'created_at' | 'updated_at'>): Promise<DatabaseResponse<Property>> {
+    try {
+      // Use the new createListing method internally
+      const result = await this.createListing({
+        title: property.title,
+        description: property.description,
+        property_type: property.property_type,
+        price: property.price,
+        city: property.location,
+        features: property.amenities || [],
+        images: property.images || [],
+        bedrooms: property.bedrooms,
+        bathrooms: property.bathrooms,
+        user_id: property.user_id
+      })
+
+      if (result.error) {
+        return { data: null, error: result.error }
+      }
+
+      // Return a mock property object
+      return {
+        data: {
+          ...property,
+          id: result.data!.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        error: null
+      }
     } catch (error) {
       return { data: null, error: error as Error }
     }
@@ -103,16 +236,16 @@ export class DatabaseService {
         queries.push(Query.equal('user_id', filters.user_id))
       }
       if (filters?.property_type) {
-        queries.push(Query.equal('type', filters.property_type))
+        queries.push(Query.equal('listing_type', filters.property_type))
       }
       if (filters?.status) {
         queries.push(Query.equal('status', filters.status))
       }
       if (filters?.price_min) {
-        queries.push(Query.greaterThanEqual('price', filters.price_min))
+        queries.push(Query.greaterThanEqual('price', filters.price_min * 100))
       }
       if (filters?.price_max) {
-        queries.push(Query.lessThanEqual('price', filters.price_max))
+        queries.push(Query.lessThanEqual('price', filters.price_max * 100))
       }
       if (filters?.limit) {
         queries.push(Query.limit(filters.limit))
@@ -226,20 +359,45 @@ export class DatabaseService {
 
   // Helper to map Appwrite document to Property type
   private mapDocToProperty(doc: any): Property {
+    // Parse JSON fields
+    let title = ''
+    let description = ''
+    let location: any = {}
+
+    try {
+      if (typeof doc.title === 'string' && doc.title) {
+        const parsed = JSON.parse(doc.title)
+        title = parsed?.en || ''
+      }
+    } catch { title = doc.title || '' }
+
+    try {
+      if (typeof doc.description === 'string' && doc.description) {
+        const parsed = JSON.parse(doc.description)
+        description = parsed?.en || ''
+      }
+    } catch { description = doc.description || '' }
+
+    try {
+      if (typeof doc.location === 'string' && doc.location) {
+        location = JSON.parse(doc.location)
+      }
+    } catch { /* ignore */ }
+
     return {
       id: doc.$id,
       user_id: doc.user_id,
-      title: doc.title,
-      description: doc.description || '',
-      price: doc.price,
-      location: doc.city || doc.district || '',
-      property_type: doc.type || 'land',
-      bedrooms: doc.bedrooms,
-      bathrooms: doc.bathrooms,
+      title: title || doc.title || '',
+      description: description || doc.description || '',
+      price: doc.price ? doc.price / 100 : 0, // Convert from cents
+      location: location?.city || location?.region || '',
+      property_type: doc.listing_type === 'sale' ? 'land' : doc.listing_type || 'land',
+      bedrooms: undefined,
+      bathrooms: undefined,
       square_feet: undefined,
       images: doc.images || [],
-      amenities: [],
-      status: doc.status || 'available',
+      amenities: doc.features || [],
+      status: doc.status === 'active' ? 'available' : doc.status || 'available',
       created_at: doc.$createdAt,
       updated_at: doc.$updatedAt,
     }

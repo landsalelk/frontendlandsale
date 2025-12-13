@@ -4,11 +4,11 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Phone, MessageCircle, Calendar, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { 
-  floatingVariants, 
-  iconVariants, 
+import {
+  floatingVariants,
+  iconVariants,
   springPhysics,
-  gentleSpring 
+  gentleSpring
 } from "@/lib/motion/variants"
 
 interface FloatingBottomActionDockProps {
@@ -82,7 +82,7 @@ export function FloatingBottomActionDock({
           initial="initial"
           animate="animate"
           exit="initial"
-          className={`fixed bottom-4 left-4 right-4 z-50 ${className}`}
+          className={`fixed bottom-4 left-4 z-50 ${className}`}
         >
           <motion.div
             initial={{ y: 100, opacity: 0 }}
@@ -194,7 +194,7 @@ export function MinimalFloatingDock({
           initial="initial"
           animate="animate"
           exit="initial"
-          className={`fixed bottom-4 left-4 right-4 z-40 ${className}`}
+          className={`fixed bottom-4 left-4 z-40 ${className}`}
         >
           <div className="mx-auto max-w-xs">
             <motion.button

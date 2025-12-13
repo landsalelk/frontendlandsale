@@ -47,10 +47,16 @@ export function transformListingToProperty(listing: any) {
     }
   } catch { /* ignore */ }
 
+  let extractedImage = '';
+
   try {
     if (typeof listing.description === 'string' && listing.description) {
       const parsed = JSON.parse(listing.description)
       description = parsed?.en || ''
+      // Fallback: Check if image is stored in description metadata
+      if (parsed?.image) {
+        extractedImage = parsed.image;
+      }
     }
   } catch { /* ignore */ }
 
@@ -72,6 +78,11 @@ export function transformListingToProperty(listing: any) {
     }
   } catch { /* ignore */ }
 
+  // Use existing images, or fallback to extracted image
+  const finalImages = listing.images && listing.images.length > 0
+    ? listing.images
+    : (extractedImage ? [extractedImage] : []);
+
   return {
     ...listing,
     title,
@@ -89,7 +100,7 @@ export function transformListingToProperty(listing: any) {
     contactPhone: contact?.phone || '',
     whatsapp: contact?.whatsapp || '',
     features: listing.features || [],
-    images: listing.images || [],
+    images: finalImages,
     priceNegotiable: listing.price_negotiable || false,
     status: listing.status,
   }

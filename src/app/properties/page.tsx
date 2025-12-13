@@ -3,7 +3,7 @@ import { createAdminClient, DATABASE_ID, COLLECTIONS } from "@/lib/appwrite/serv
 import { Query } from "node-appwrite"
 import SearchClient from "@/components/features/search/SearchClient"
 import { PropertyProps } from "@/components/features/properties/PropertyCard"
-import { getPropertyImageUrl } from "@/lib/utils"
+import { getPropertyImageUrl, transformListingToProperty } from "@/lib/utils"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -115,7 +115,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
                 // Safely parse title and location for filtering
                 let title = ''
                 let location: { region: string; city: string } = { region: '', city: '' }
-                
+
                 try {
                     if (p.title) {
                         const parsedTitle = JSON.parse(p.title)
@@ -124,7 +124,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
                 } catch {
                     title = p.title || ''
                 }
-                
+
                 try {
                     if (p.location) {
                         const parsedLocation = JSON.parse(p.location)
@@ -136,7 +136,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
                 } catch {
                     location = { city: p.location, region: p.location }
                 }
-                
+
                 return (
                     title.toLowerCase().includes(lowerQuery) ||
                     location.city?.toLowerCase().includes(lowerQuery) ||
@@ -166,83 +166,21 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
 
         if (dbProperties.length > 0) {
             properties = dbProperties.map(p => {
-                try {
-                    // Safely parse JSON fields with fallback to plain text
-                    let title = "Untitled Property"
-                    let location: { region: string; city: string } = { region: '', city: '' }
-                    let attributes: { size?: string; bedrooms?: number; bathrooms?: number } = {}
-                    
-                    // Handle title field
-                    if (p.title) {
-                        try {
-                            const parsedTitle = JSON.parse(p.title)
-                            title = parsedTitle.en || parsedTitle.toString() || p.title
-                        } catch {
-                            title = p.title
-                        }
-                    }
-                    
-                    // Handle location field
-                    if (p.location) {
-                        try {
-                            const parsedLocation = JSON.parse(p.location)
-                            location = {
-                                region: parsedLocation.region || '',
-                                city: parsedLocation.city || ''
-                            }
-                        } catch {
-                            location = { city: p.location, region: p.location }
-                        }
-                    } else {
-                        location = { region: '', city: '' }
-                    }
-                    
-                    // Handle attributes field
-                    if (p.attributes) {
-                        try {
-                            const parsedAttributes = JSON.parse(p.attributes)
-                            attributes = { 
-                                size: parsedAttributes.size || '',
-                                bedrooms: parsedAttributes.bedrooms || 0,
-                                bathrooms: parsedAttributes.bathrooms || 0
-                            }
-                        } catch {
-                            attributes = { size: p.attributes, bedrooms: 0, bathrooms: 0 }
-                        }
-                    } else {
-                        attributes = { size: '', bedrooms: 0, bathrooms: 0 }
-                    }
-                    
-                    return {
-                        id: p.$id,
-                        title: title || "Untitled Property",
-                        price: p.price ? p.price / 100 : 0,
-                        location: `${location.city || 'Unknown'}, ${location.region || 'Location'}`,
-                        image: getPropertyImageUrl(p.images?.[0]),
-                        type: p.listing_type === 'sale' ? 'land' : p.listing_type || "land",
-                        beds: attributes.bedrooms || 0,
-                        baths: attributes.bathrooms || 0,
-                        size: attributes.size || "N/A",
-                        slug: p.$id,
-                        isFeatured: false
-                    }
-                } catch (error) {
-                    console.error("Error transforming property:", error)
-                    return {
-                        id: p.$id,
-                        title: "Untitled Property",
-                        price: 0,
-                        location: "Unknown Location",
-                        image: getPropertyImageUrl(p.images?.[0]),
-                        type: "land",
-                        beds: 0,
-                        baths: 0,
-                        size: "N/A",
-                        slug: p.$id,
-                        isFeatured: false
-                    }
-                }
-            })
+                const transformed = transformListingToProperty(p);
+                return {
+                    id: p.$id,
+                    title: transformed.title || "Untitled Property",
+                    price: transformed.price || 0,
+                    location: `${transformed.city || 'Unknown'}, ${transformed.district || 'Location'}`,
+                    image: getPropertyImageUrl(transformed.images?.[0]),
+                    type: transformed.type || "land",
+                    beds: transformed.bedrooms || 0,
+                    baths: transformed.bathrooms || 0,
+                    size: transformed.size || "N/A",
+                    slug: p.$id,
+                    isFeatured: false
+                };
+            });
         }
     } catch (error) {
         console.error("[Properties] Error fetching properties:", error)
