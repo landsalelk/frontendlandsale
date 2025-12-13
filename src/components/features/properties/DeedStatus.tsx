@@ -1,6 +1,6 @@
 "use client";
 
-import { FileCheck, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { FileCheck, HelpCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
@@ -8,7 +8,15 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export default function DeedStatus() {
+interface DeedStatusProps {
+    deedType?: string; // e.g. "Sinnakkara", "Bim Saviya", "Jaya Boomi"
+    bankLoan?: boolean;
+}
+
+export default function DeedStatus({ deedType = "Sinnakkara", bankLoan = true }: DeedStatusProps) {
+
+    const isClearTitle = deedType.toLowerCase().includes("sinnakkara") || deedType.toLowerCase().includes("freehold");
+
     return (
         <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 space-y-3">
             <h4 className="flex items-center gap-2 font-semibold text-slate-800">
@@ -27,13 +35,15 @@ export default function DeedStatus() {
                                     <HelpCircle className="w-3 h-3 text-slate-400 cursor-help" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
-                                    <p><strong>Sinnakkara (Freehold):</strong> You have absolute ownership. Best for bank loans.</p>
+                                    <p><strong>Sinnakkara (Freehold):</strong> Absolute ownership. Best for bank loans.</p>
+                                    <p className="mt-1"><strong>Bim Saviya:</strong> Electronic Govt Title.</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
                     </span>
-                    <span className="font-medium text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Sinnakkara (Freehold)
+                    <span className={`font-medium flex items-center gap-1 ${isClearTitle ? "text-emerald-700" : "text-amber-600"}`}>
+                        {isClearTitle ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                        {deedType || "Not Specified"}
                     </span>
                 </div>
 
@@ -47,14 +57,20 @@ export default function DeedStatus() {
                                     <HelpCircle className="w-3 h-3 text-slate-400 cursor-help" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
-                                    <p>Properties with clear titles are approved for mortgage loans by major banks.</p>
+                                    <p>Major banks require Clear Titles (Sinnakkara) or First Class Bim Saviya.</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
                     </span>
-                    <span className="font-medium text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Approved
-                    </span>
+                    {bankLoan ? (
+                        <span className="font-medium text-emerald-700 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> obtainable
+                        </span>
+                    ) : (
+                        <span className="font-medium text-amber-600 flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Verify
+                        </span>
+                    )}
                 </div>
                 {/* Bim Saviya */}
                 <div className="flex items-center justify-between text-sm">

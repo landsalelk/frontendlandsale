@@ -32,6 +32,7 @@ import AiInvestmentTip from "@/components/features/properties/AiInvestmentTip"
 import RoiCalculator from "@/components/features/properties/RoiCalculator"
 import TrustBadge from "@/components/features/properties/TrustBadge"
 import DeedStatus from "@/components/features/properties/DeedStatus"
+import LiquidBtmNav from "@/components/features/properties/LiquidBtmNav"
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
@@ -169,6 +170,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
         "numberOfBathroomsTotal": property.bathrooms || undefined
     }
 
+    // Intelligent Data Parsing (Simulating schema fields from description)
+    const isBimSaviya = property.description?.toLowerCase().includes("bim saviya");
+    const deedType = isBimSaviya ? "Bim Saviya" : "Sinnakkara (Freehold)";
+    const bankLoan = !isBimSaviya; // Assume Sinnakkara is loanable
+
     return (
         <div>
             <script
@@ -178,6 +184,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
 
             {/* GLOBAL URGENCY NOTIFICATION (Sticky/Fixed) */}
             <SmartNotification />
+
+            {/* LIQUID UX MOOD SENSOR (Fixed Bottom) */}
+            <LiquidBtmNav
+                price={formattedPrice}
+                phone={property.contact_phone || ""}
+                whatsapp={property.whatsapp || property.contact_phone}
+            />
 
             <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
                 {/* Breadcrumb / Top Actions */}
@@ -319,7 +332,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                         <RoiCalculator price={property.price} city={property.city} />
 
                         {/* TRUST: DEED STATUS (Honesty Box) */}
-                        <DeedStatus />
+                        <DeedStatus deedType={deedType} bankLoan={bankLoan} />
 
                         {/* Agent/Seller Card */}
                         <Card>
