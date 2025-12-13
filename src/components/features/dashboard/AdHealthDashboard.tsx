@@ -303,12 +303,52 @@ export function AdHealthDashboard({ property, open, onOpenChange }: AdHealthDash
 
                             {/* BOOST TAB */}
                             <TabsContent value="boost">
-                                <div className="text-center py-12 text-muted-foreground">
-                                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <TrendingUp className="w-8 h-8 opacity-50" />
+                                <div className="space-y-6">
+                                    <div className="text-center">
+                                        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full mb-4">
+                                            <TrendingUp className="w-8 h-8 text-white" />
+                                        </div>
+                                        <h3 className="text-xl font-bold">Boost Your Listing</h3>
+                                        <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+                                            Get more views and sell faster with a boosted listing
+                                        </p>
                                     </div>
-                                    <h3 className="text-lg font-semibold text-foreground">Premium Boost Features</h3>
-                                    <p className="max-w-md mx-auto mt-2">Coming soon! Use our diagnostic tools to improve your organic reach first.</p>
+
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="border border-border rounded-xl p-6 hover:border-orange-300 transition-colors">
+                                            <h4 className="font-semibold text-lg">Weekly Boost</h4>
+                                            <p className="text-sm text-muted-foreground mb-4">7 days visibility</p>
+                                            <div className="text-3xl font-bold text-orange-600 mb-4">Rs. 500</div>
+                                            <ul className="text-sm space-y-2 mb-6">
+                                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> Top of search results</li>
+                                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> 2x more views</li>
+                                            </ul>
+                                            <Button className="w-full" variant="outline" onClick={() => window.location.href = `/dashboard/boost/${property.id}?plan=weekly`}>
+                                                Select Weekly
+                                            </Button>
+                                        </div>
+
+                                        <div className="border-2 border-orange-500 rounded-xl p-6 relative bg-orange-50/50 dark:bg-orange-950/10">
+                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-pink-500 text-white text-xs px-3 py-1 rounded-full font-medium">
+                                                Best Value
+                                            </div>
+                                            <h4 className="font-semibold text-lg">Monthly Boost</h4>
+                                            <p className="text-sm text-muted-foreground mb-4">30 days visibility</p>
+                                            <div className="text-3xl font-bold text-orange-600 mb-4">Rs. 1,500</div>
+                                            <ul className="text-sm space-y-2 mb-6">
+                                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> Top of search results</li>
+                                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> Featured on homepage</li>
+                                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> 5x more views</li>
+                                            </ul>
+                                            <Button className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600" onClick={() => window.location.href = `/dashboard/boost/${property.id}?plan=monthly`}>
+                                                Select Monthly
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <p className="text-xs text-center text-muted-foreground">
+                                        Secure payment powered by PayHere 🔒
+                                    </p>
                                 </div>
                             </TabsContent>
                         </AnimatePresence>
