@@ -27,195 +27,10 @@ import { getSimilarProperties, incrementPropertyViews } from "@/lib/actions/prop
 import LiveViewCounter from "@/components/features/properties/LiveViewCounter"
 import AiFutureVision from "@/components/features/properties/AiFutureVision"
 import SmartNotification from "@/components/features/properties/SmartNotification"
-import RoiCalculator from "@/components/features/properties/RoiCalculator"
-
-// ... imports
-
-export default async function PropertyPage({ params }: { params: Promise<{ slug: string }> }) {
-    // ... setup code
-
-    return (
-        <div>
-            {/* ... script & notification ... */}
-
-            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                {/* ... Breadcrumbs ... */}
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-8">
-                        {/* ... Market Insights, Tips, etc */}
-                        <PropertyImageGallery
-                            images={displayImages}
-                            title={property.title}
-                            status={property.status}
-                        />
-
-                        {/* Title & Key Info */}
-                        <div>
-                            <div className="flex flex-col gap-2">
-                                {/* FOMO TRIGGER: Live View Counter */}
-                                <LiveViewCounter />
-
-                                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">{property.title}</h1>
-                                <div className="flex items-center text-muted-foreground">
-                                    <MapPin className="h-4 w-4 mr-1 text-emerald-500" />
-                                    {property.city}, {property.district}
-                                </div>
-                                {property.address && (
-                                    <p className="text-sm text-muted-foreground">{property.address}</p>
-                                )}
-                            </div>
-
-                            <div className="mt-6 flex flex-wrap gap-3">
-                                <Badge variant="secondary" className="text-sm px-3 py-1 capitalize">
-                                    {property.type}
-                                </Badge>
-                                <Badge variant="outline" className="text-sm px-3 py-1 flex items-center">
-                                    <Ruler className="h-3 w-3 mr-1" /> {property.size}
-                                </Badge>
-                                {property.bedrooms && (
-                                    <Badge variant="outline" className="text-sm px-3 py-1 flex items-center">
-                                        <Bed className="h-3 w-3 mr-1" /> {property.bedrooms} Beds
-                                    </Badge>
-                                )}
-                                {property.bathrooms && (
-                                    <Badge variant="outline" className="text-sm px-3 py-1 flex items-center">
-                                        <Bath className="h-3 w-3 mr-1" /> {property.bathrooms} Baths
-                                    </Badge>
-                                )}
-                                <Badge variant="secondary" className="text-sm px-3 py-1 flex items-center text-muted-foreground">
-                                    <Calendar className="h-3 w-3 mr-1" /> Posted {postedDate}
-                                </Badge>
-                            </div>
-                        </div>
-
-                        <Separator />
-
-                        {/* Description */}
-                        <div>
-                            <h3 className="text-xl font-semibold mb-4">Description</h3>
-                            <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 whitespace-pre-line">
-                                {property.description}
-                            </div>
-                        </div>
-
-                        {/* NEW: AI INVESTMENT TIP */}
-                        <AiInvestmentTip city={property.city} />
-
-                        {/* VISUAL CRAVING: AI Future Vision (Only for Land) */}
-                        <AiFutureVision
-                            propertyType={property.type}
-                            propertyTitle={property.title}
-                            location={property.city}
-                        />
-
-                        <Separator />
-
-                        {/* Features */}
-                        {property.features && property.features.length > 0 && (
-                            <div>
-                                <h3 className="text-xl font-semibold mb-4">Features</h3>
-                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {property.features.map((feature: string, idx: number) => (
-                                        <li key={idx} className="flex items-center text-slate-700 dark:text-slate-300">
-                                            <div className="h-2 w-2 rounded-full bg-emerald-500 mr-2" />
-                                            {feature}
-                                        </li>
-                                    ))}
-                                </ul>
-                                <Separator className="mt-8" />
-                            </div>
-                        )}
-
-                        {/* Location / Map */}
-                        <div>
-                            <h3 className="text-xl font-semibold mb-4">Location</h3>
-                            <div className="aspect-[16/9] bg-slate-100 dark:bg-slate-900 rounded-xl flex flex-col items-center justify-center border relative overflow-hidden group">
-                                <MapPin className="h-10 w-10 text-emerald-600 mb-2 relative z-10" />
-                                <p className="text-muted-foreground font-medium relative z-10 mb-4">{property.address || property.city}, {property.district}</p>
-
-                                <Button asChild variant="outline" className="relative z-10 bg-white/80 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 backdrop-blur">
-                                    <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.address || ''} ${property.city} ${property.district} Sri Lanka`)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        View on Google Maps
-                                    </a>
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Sidebar */}
-                    <div className="space-y-6">
-                        {/* Price Card */}
-                        <Card className="border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20">
-                            <CardHeader>
-                                <CardDescription>Price {property.price_negotiable ? "(Negotiable)" : ""}</CardDescription>
-                                <CardTitle className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
-                                    {formattedPrice}
-                                </CardTitle>
-                            </CardHeader>
-                        </Card>
-
-                        {/* ROI CALCULATOR (Greed) - Moved up for visibility */}
-                        <RoiCalculator price={property.price} city={property.city} />
-
-                        {/* Agent/Seller Card */}
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center gap-4">
-                                    <Avatar className="h-12 w-12">
-                                        <AvatarImage src="" />
-                                        <AvatarFallback><User /></AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <CardTitle className="text-lg">{property.contact_name || 'Seller'}</CardTitle>
-                                        <CardDescription>Seller</CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {property.contact_phone && (
-                                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700 font-bold h-12 text-lg" asChild>
-                                        <a href={`tel:${property.contact_phone}`}>
-                                            <Phone className="mr-2 h-5 w-5" /> Call Seller
-                                        </a>
-                                    </Button>
-                                )}
-                                {(property.whatsapp || property.contact_phone) && (
-                                    <Button variant="outline" className="w-full border-green-500 text-green-600 hover:bg-green-50 h-12 text-lg" asChild>
-                                        <a href={`https://wa.me/${(property.whatsapp || property.contact_phone || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                                            <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp
-                                        </a>
-                                    </Button>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* NEW: MARKET INSIGHTS */}
-                        <MarketInsights city={property.city} district={property.district} />
-
-                        {/* Inquiry Form - Only show if not own property */}
-                        {!isOwnProperty && (
-                            <InquiryForm
-                                propertyId={property.$id}
-                                sellerId={property.user_id}
-                                propertyTitle={property.title}
-                                isLoggedIn={isLoggedIn}
-                            />
-                        )}
-                    </div>
-                </div>
-
-                <SimilarProperties properties={similarProperties} />
-            </div>
-        </div>
-    )
-}
+import MarketInsights from "@/components/features/properties/MarketInsights"
 import AiInvestmentTip from "@/components/features/properties/AiInvestmentTip"
+import RoiCalculator from "@/components/features/properties/RoiCalculator"
+import TrustBadge from "@/components/features/properties/TrustBadge"
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
@@ -390,8 +205,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                         {/* Title & Key Info */}
                         <div>
                             <div className="flex flex-col gap-2">
-                                {/* FOMO TRIGGER: Live View Counter */}
-                                <LiveViewCounter />
+                                {/* FOMO & TRUST TRIGGERS */}
+                                <div className="flex items-center gap-3 mb-1">
+                                    <LiveViewCounter />
+                                    <TrustBadge />
+                                </div>
 
                                 <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">{property.title}</h1>
                                 <div className="flex items-center text-muted-foreground">
@@ -496,6 +314,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                             </CardHeader>
                         </Card>
 
+                        {/* ROI CALCULATOR (Greed) */}
+                        <RoiCalculator price={property.price} city={property.city} />
+
                         {/* Agent/Seller Card */}
                         <Card>
                             <CardHeader>
@@ -528,7 +349,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                             </CardContent>
                         </Card>
 
-                        {/* NEW: MARKET INSIGHTS */}
+                        {/* MARKET INSIGHTS */}
                         <MarketInsights city={property.city} district={property.district} />
 
                         {/* Inquiry Form - Only show if not own property */}
