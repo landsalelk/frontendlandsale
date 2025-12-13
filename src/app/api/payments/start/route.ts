@@ -10,7 +10,7 @@ const PAYHERE_URL = PAYHERE_MODE === "live"
     : "https://sandbox.payhere.lk/pay/checkout"
 
 // Product configurations
-const PRODUCTS = {
+const PRODUCTS: Record<string, { name: string; price: number; currency: string; description: string }> = {
     boost_weekly: {
         name: "Boost Listing - 1 Week",
         price: 500.00,
@@ -34,19 +34,60 @@ const PRODUCTS = {
         price: 2500.00,
         currency: "LKR",
         description: "Unlimited leads in your service areas for 30 days"
+    },
+    // Digital Products
+    investment_report: {
+        name: "Investment Analysis Report",
+        price: 500.00,
+        currency: "LKR",
+        description: "AI-powered ROI analysis and future value prediction"
+    },
+    valuation_report: {
+        name: "Professional Valuation Report",
+        price: 1500.00,
+        currency: "LKR",
+        description: "Detailed valuation based on market data"
+    },
+    blueprint: {
+        name: "Land Survey & Blueprint",
+        price: 2500.00,
+        currency: "LKR",
+        description: "Detailed land measurements and survey data"
+    },
+    raw_images: {
+        name: "High-Resolution Images Pack",
+        price: 300.00,
+        currency: "LKR",
+        description: "Original, unwatermarked photos in full resolution"
+    },
+    // Flexible digital product (uses custom amount)
+    digital_product: {
+        name: "Digital Product",
+        price: 0, // Will be overridden by customAmount
+        currency: "LKR",
+        description: "Premium digital content"
     }
 }
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
-        const { productId, orderId, userId, userEmail, userName, userPhone, propertyId } = body
+        const { productId, orderId, userId, userEmail, userName, userPhone, propertyId, customAmount, customName } = body
 
-        if (!productId || !PRODUCTS[productId as keyof typeof PRODUCTS]) {
+        if (!productId || !PRODUCTS[productId]) {
             return NextResponse.json({ error: "Invalid product" }, { status: 400 })
         }
 
-        const product = PRODUCTS[productId as keyof typeof PRODUCTS]
+        let product = { ...PRODUCTS[productId] }
+
+        // Allow custom amount/name for flexible products
+        if (customAmount && customAmount > 0) {
+            product.price = customAmount
+        }
+        if (customName) {
+            product.name = customName
+        }
+
         const amount = product.price.toFixed(2)
 
         // Generate MD5 hash for PayHere security
@@ -92,3 +133,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
+
