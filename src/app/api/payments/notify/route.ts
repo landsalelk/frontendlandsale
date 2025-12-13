@@ -126,17 +126,72 @@ async function handleSuccessfulPayment(data: {
                     data.propertyId,
                     {
                         verification_requested: true,
-                        verification_paid: true
+                        verification_paid: true,
+                        is_verified: true // Auto-verify on payment (can change to manual later)
                     }
                 )
-                console.log(`[PayHere] Verification requested for ${data.propertyId}`)
+                console.log(`[PayHere] Verification activated for ${data.propertyId}`)
             }
             break
 
         case "AGENT":
             // Activate agent subscription
-            // You would update the agents collection or users_extended
-            console.log(`[PayHere] Agent subscription activated for ${data.userId}`)
+            if (data.userId) {
+                try {
+                    // Find the agent's document
+                    const agents = await databases.listDocuments(
+                        DATABASE_ID,
+                        COLLECTIONS.AGENTS,
+                        [Query.equal('user_id', data.userId), Query.limit(1)]
+                    )
+                    if (agents.documents.length > 0) {
+                        const subscriptionUntil = new Date()
+                        subscriptionUntil.setDate(subscriptionUntil.getDate() + 30)
+
+                        await databases.updateDocument(
+                            DATABASE_ID,
+                            COLLECTIONS.AGENTS,
+                            agents.documents[0].$id,
+                            {
+                                is_verified: true,
+                                status: 'active',
+                                subscription_until: subscriptionUntil.toISOString()
+                            }
+                        )
+                        console.log(`[PayHere] Agent subscription activated for ${data.userId}`)
+                    }
+                } catch (agentError) {
+                    console.error("[PayHere] Error activating agent:", agentError)
+                }
+            }
+            break
+
+        case "DIGITAL":
+            // Record digital product purchase
+            if (data.propertyId && data.userId) {
+                try {
+                    // Extract product type from order_id (e.g., DIGITAL_INVESTMENT_REPORT_propId_timestamp)
+                    const productType = data.orderId.split("_").slice(1, -2).join("_").toLowerCase()
+
+                    await databases.createDocument(
+                        DATABASE_ID,
+                        COLLECTIONS.DIGITAL_PURCHASES,
+                        ID.unique(),
+                        {
+                            user_id: data.userId,
+                            property_id: data.propertyId,
+                            product_type: productType,
+                            payment_id: data.paymentId,
+                            amount: parseFloat(data.amount) * 100,
+                            status: 'completed',
+                            created_at: new Date().toISOString()
+                        }
+                    )
+                    console.log(`[PayHere] Digital product ${productType} purchased for property ${data.propertyId}`)
+                } catch (digitalError) {
+                    console.error("[PayHere] Error recording digital purchase:", digitalError)
+                }
+            }
             break
 
         default:

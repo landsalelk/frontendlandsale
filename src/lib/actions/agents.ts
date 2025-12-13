@@ -70,34 +70,45 @@ export async function createAgentProfile(data: AgentProfileData) {
         const { databases } = await createAdminClient()
 
         // Check if user already has an agent profile
-        // For now, we'll just create a document in users_extended or a new agents collection
+        try {
+            const existing = await databases.listDocuments(
+                DATABASE_ID,
+                COLLECTIONS.AGENTS,
+                [Query.equal('user_id', data.userId), Query.limit(1)]
+            )
+            if (existing.documents.length > 0) {
+                return { success: false, error: "You already have an agent profile" }
+            }
+        } catch (checkError) {
+            // Collection might not exist yet, proceed with creation
+            console.log("[Agent] Collection check failed, proceeding with creation")
+        }
 
-        // Placeholder: In production, create in 'agents' collection
-        console.log("[Agent] Creating profile for:", data.fullName)
-        console.log("[Agent] Service Areas:", data.serviceAreas.join(", "))
+        // Create the agent profile
+        const profile = await databases.createDocument(
+            DATABASE_ID,
+            COLLECTIONS.AGENTS,
+            ID.unique(),
+            {
+                user_id: data.userId,
+                name: data.fullName,
+                phone: data.phone,
+                whatsapp: data.whatsapp || data.phone,
+                bio: data.bio,
+                experience_years: data.experience,
+                service_areas: data.serviceAreas,
+                specializations: data.specializations,
+                is_verified: false,
+                status: 'pending',
+                rating: 0,
+                review_count: 0,
+                deals_count: 0,
+                created_at: new Date().toISOString()
+            }
+        )
 
-        // await databases.createDocument(
-        //     DATABASE_ID,
-        //     'agents', // You may need to create this collection
-        //     ID.unique(),
-        //     {
-        //         user_id: data.userId,
-        //         name: data.fullName,
-        //         phone: data.phone,
-        //         whatsapp: data.whatsapp,
-        //         bio: data.bio,
-        //         experience_years: data.experience,
-        //         service_areas: data.serviceAreas,
-        //         specializations: data.specializations,
-        //         is_verified: false,
-        //         status: 'pending',
-        //         rating: 0,
-        //         review_count: 0,
-        //         deals_count: 0
-        //     }
-        // )
-
-        return { success: true }
+        console.log("[Agent] Profile created:", profile.$id)
+        return { success: true, profileId: profile.$id }
     } catch (error: any) {
         console.error("[Agent] Error creating profile:", error)
         return { success: false, error: error.message }

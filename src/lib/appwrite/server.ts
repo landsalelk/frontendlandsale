@@ -153,8 +153,10 @@ export const COLLECTIONS = {
     SEO_META: process.env.NEXT_PUBLIC_APPWRITE_SEO_META_COLLECTION_ID || 'seo_meta',
     SETTINGS: process.env.NEXT_PUBLIC_APPWRITE_SETTINGS_COLLECTION_ID || 'settings',
 
-    // Transactions
+    // Transactions & Monetization
     TRANSACTIONS: process.env.NEXT_PUBLIC_APPWRITE_TRANSACTIONS_COLLECTION_ID || 'transactions',
+    DIGITAL_PURCHASES: 'digital_purchases',
+    AGENTS: 'agents',
 }
 
 // Legacy support for existing code

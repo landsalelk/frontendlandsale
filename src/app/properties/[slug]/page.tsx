@@ -34,6 +34,8 @@ import TrustBadge from "@/components/features/properties/TrustBadge"
 import DeedStatus from "@/components/features/properties/DeedStatus"
 import LiquidBtmNav from "@/components/features/properties/LiquidBtmNav"
 import { QuickQuestionButtons } from "@/components/features/properties/QuickQuestionButtons"
+import { DigitalProductsShop } from "@/components/features/products/DigitalProductsShop"
+import { DIGITAL_PRODUCTS_CATALOG } from "@/lib/constants/products"
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
@@ -390,6 +392,36 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
                                 propertyTitle={property.title}
                                 isLoggedIn={isLoggedIn}
                             />
+                        )}
+
+                        {/* DIGITAL PRODUCTS SHOP */}
+                        {!isOwnProperty && (
+                            <Card className="border-purple-200/50">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        📦 Premium Content
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <DigitalProductsShop
+                                        propertyId={property.$id}
+                                        propertyTitle={property.title}
+                                        products={Object.entries(DIGITAL_PRODUCTS_CATALOG).map(([type, p]) => ({
+                                            id: `${property.$id}_${type}`,
+                                            property_id: property.$id,
+                                            type,
+                                            name: p.name,
+                                            description: p.description,
+                                            price: p.price,
+                                            icon: p.icon,
+                                            is_available: true
+                                        }))}
+                                        userId={user?.$id}
+                                        userEmail={user?.email}
+                                        userName={user?.name}
+                                    />
+                                </CardContent>
+                            </Card>
                         )}
                     </div>
                 </div>
