@@ -31,6 +31,7 @@ import MarketInsights from "@/components/features/properties/MarketInsights"
 import AiInvestmentTip from "@/components/features/properties/AiInvestmentTip"
 import RoiCalculator from "@/components/features/properties/RoiCalculator"
 import TrustBadge from "@/components/features/properties/TrustBadge"
+import DeedStatus from "@/components/features/properties/DeedStatus"
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
@@ -316,6 +317,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
 
                         {/* ROI CALCULATOR (Greed) */}
                         <RoiCalculator price={property.price} city={property.city} />
+
+                        {/* TRUST: DEED STATUS (Honesty Box) */}
+                        <DeedStatus />
 
                         {/* Agent/Seller Card */}
                         <Card>

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { sendInquiry } from "@/lib/actions/inquiry"
-import { Check, Loader2, Mail, Send } from "lucide-react"
+import { Check, Loader2, Mail, Send, Lock } from "lucide-react"
 import { toast } from "sonner"
 
 interface InquiryFormProps {
@@ -160,6 +160,11 @@ export function InquiryForm({ propertyId, sellerId, propertyTitle, isLoggedIn }:
                                 </>
                             )}
                         </Button>
+
+                        <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground pt-2">
+                            <Lock className="w-3 h-3 text-emerald-600/70" />
+                            <span>Your privacy is protected. We never share your data.</span>
+                        </div>
                     </form>
                 )}
             </CardContent>
